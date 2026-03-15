@@ -1,0 +1,62 @@
+/* ================= ULTRA SAAS DESIGN SYSTEM ================= */
+
+:root {
+  --bg-primary: #0b1f3a;
+  --bg-secondary: #1b2b55;
+  --bg-tertiary: #2b2f6b;
+  --bg-accent: #4e54c8;
+
+  --accent-cyan: #00d4ff;
+  --accent-purple: #8f94fb;
+
+  --glass-bg: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.1);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255,255,255,0.7);
+}
+
+/* GLOBAL BACKGROUND */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: radial-gradient(
+      circle at 20% 30%,
+      rgba(78,84,200,0.35),
+      transparent 40%
+    ),
+    linear-gradient(
+      120deg,
+      var(--bg-primary),
+      var(--bg-secondary),
+      var(--bg-tertiary),
+      var(--bg-accent)
+    );
+
+  color: var(--text-primary);
+}
+
+/* GLOBAL BUTTON */
+.btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--accent-cyan),
+    var(--accent-purple)
+  );
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  color: #000;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* GLOBAL CARD */
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  padding: 25px;
+  backdrop-filter: blur(15px);
+}
+

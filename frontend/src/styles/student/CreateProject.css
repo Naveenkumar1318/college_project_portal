@@ -1,0 +1,274 @@
+/* ===============================
+   CREATE PROJECT - PREMIUM STUDENT THEME
+================================= */
+
+.create-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 70px 20px;
+}
+
+/* ================= CARD ================= */
+
+.create-card {
+  width: 100%;
+  max-width: 650px;
+  background: rgba(30, 41, 59, 0.65);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 22px;
+  padding: 45px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+  color: #f1f5f9;
+  transition: 0.35s ease;
+}
+
+.create-card:hover {
+  transform: translateY(-6px);
+}
+
+/* ================= HEADER ================= */
+
+.create-card h2 {
+  text-align: center;
+  margin-bottom: 35px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: #e2e8f0;
+}
+
+/* ================= FORM GROUP ================= */
+
+.form-group {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.form-group label {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+/* ================= INPUT & TEXTAREA ================= */
+
+.form-group input,
+.form-group textarea {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: none;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #64748b;
+}
+
+/* ================= MULTI SELECT CONTAINER ================= */
+
+.multi-select-container {
+  border: 1px solid #334155;
+  background: #0f172a;
+  border-radius: 14px;
+  padding: 8px;
+  min-height: 52px;
+  cursor: text;
+  transition: 0.3s ease;
+}
+
+.multi-select-container:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* ================= SELECTED CHIPS ================= */
+
+.selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.selected-chips input {
+  border: none !important;
+  outline: none !important;
+  background: transparent;
+  color: #f8fafc;
+  font-size: 14px;
+  flex: 1;
+  min-width: 120px;
+  padding: 6px 4px;
+  box-shadow: none !important;
+}
+
+/* Prevent form-group input style affecting multi-select search input */
+
+.multi-select-container input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+/* ================= CHIP STYLE ================= */
+
+.chip {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  animation: fadeSlide 0.2s ease;
+}
+
+.chip span {
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.chip span:hover {
+  opacity: 0.8;
+}
+
+/* ================= DROPDOWN ================= */
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.98);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 999;
+  animation: fadeSlide 0.25s ease;
+}
+
+/* Scrollbar */
+
+.dropdown-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* ================= DROPDOWN ITEM ================= */
+
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #e2e8f0;
+  transition: 0.25s ease;
+}
+
+.dropdown-item:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.dropdown-item.active {
+  background: rgba(59, 130, 246, 0.25);
+  font-weight: 500;
+}
+
+/* ================= EMPTY STATE ================= */
+
+.no-result {
+  padding: 14px;
+  text-align: center;
+  color: #64748b;
+}
+
+/* ================= BUTTON ================= */
+
+.create-btn {
+  width: 100%;
+  margin-top: 15px;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.45);
+}
+
+.create-btn:active {
+  transform: scale(0.97);
+}
+
+.create-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ================= ANIMATION ================= */
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+  .create-card {
+    padding: 28px;
+  }
+
+  .create-card h2 {
+    font-size: 22px;
+  }
+}
