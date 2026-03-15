@@ -40,15 +40,13 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ================= REMBG SESSION =================
 
-rembg_session = new_session()
 
 # ================= DATABASE =================
 
@@ -1350,7 +1348,8 @@ async def upload_profile_image(
         contents = await file.read()
 
         # Remove background
-        output = remove(contents, session=rembg_session)
+        session = new_session()
+        output = remove(contents, session=session)
 
         filename = f"profile_{payload['user_id']}.png"
         filepath = os.path.join(UPLOAD_DIR, filename)
