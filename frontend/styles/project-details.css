@@ -1,0 +1,77 @@
+.pd-container {
+  padding: 20px;
+  color: white;
+}
+
+.pd-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pd-status {
+  background: #22c55e;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.pd-desc {
+  margin: 15px 0;
+  color: #cbd5f5;
+}
+
+/* TOGGLE */
+.pd-toggle {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.pd-toggle button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #1e293b;
+  color: white;
+}
+
+.pd-toggle .active {
+  background: #4f46e5;
+}
+
+/* ACTIONS */
+.pd-actions {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.pd-actions button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.pd-actions .danger {
+  background: red;
+}
+
+.pd-actions .success {
+  background: green;
+}
+
+/* TABS */
+.pd-tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pd-tabs button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #1e293b;
+  border: none;
+  color: white;
+}
