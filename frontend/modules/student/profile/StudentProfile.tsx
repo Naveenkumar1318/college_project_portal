@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   FaGithub,
   FaLinkedin,
@@ -8,7 +8,7 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 import API from "../../../services/api";
-import "../../../styles/student-profile.css";
+import "../../../styles/modules/student/profile/student-profile.css";
 
 interface Profile {
   name?: string;
@@ -24,6 +24,7 @@ interface Profile {
   whatsapp?: string;
   image?: string;
   resume?: string;
+  skills?: string;
 }
 
 interface Stats {
@@ -35,6 +36,7 @@ interface Stats {
 
 const StudentProfile = () => {
   const navigate = useNavigate();
+  const { user_id } = useParams();
   const [profile, setProfile] = useState<Profile>({});
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,8 @@ const StudentProfile = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const { data } = await API.get<Profile>("/profile");
+        const url = user_id ? `/profile/${user_id}` : "/profile";
+const { data } = await API.get<Profile>(url);
         setProfile(data);
         setError(null);
       } catch (err) {
@@ -56,20 +59,24 @@ const StudentProfile = () => {
       }
     };
     fetchProfile();
-  }, []);
+ }, [user_id]);
 
   // Fetch project statistics
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data } = await API.get<Stats>("/profile/stats");
+        const url = user_id
+  ? `/profile/${user_id}/stats`
+  : "/profile/stats";
+
+const { data } = await API.get<Stats>(url);
         setStats(data);
       } catch (err) {
         console.error("Failed to load stats:", err);
       }
     };
     fetchStats();
-  }, []);
+}, [user_id]);
 
 const handleDownloadCV = () => {
   if (!profile.resume) {
@@ -115,7 +122,17 @@ const handleDownloadCV = () => {
   }
 
   return (
-    <div className="profile-container">
+  <div className="profile-page">
+
+  {/* BACK BUTTON */}
+  <button
+    className="profile-back-btn"
+    onClick={() => navigate(-1)}
+  >
+    ← Back
+  </button>
+
+  <div className="profile-container">
   
 
       {/* LEFT SECTION */}
@@ -130,6 +147,14 @@ const handleDownloadCV = () => {
         <h2 className="role">{profile.degree || "Student"}.</h2>
 
         <p className="bio">{profile.bio || "No bio added yet."}</p>
+
+        {profile.skills && (
+  <div className="skills">
+    {profile.skills.split(",").map((s, i) => (
+      <span key={i} className="skill">{s}</span>
+    ))}
+  </div>
+)}
 
         <div className="info">
           <p>
@@ -151,12 +176,14 @@ const handleDownloadCV = () => {
           <button className="btn-primary" onClick={handleDownloadCV}>
             Download CV
           </button>
-          <button
-            className="btn-outline"
-            onClick={() => navigate("/student/profile/edit")}
-          >
-            Edit Profile →
-          </button>
+{!user_id && (
+  <button
+    className="btn-outline"
+    onClick={() => navigate("/student/profile/edit")}
+  >
+    Edit Profile →
+  </button>
+)}
         </div>
 
         {/* SOCIAL ICONS */}
@@ -227,6 +254,7 @@ const handleDownloadCV = () => {
           <div className="image-placeholder">No Image</div>
         )}
       </div>
+    </div>
     </div>
   );
 };

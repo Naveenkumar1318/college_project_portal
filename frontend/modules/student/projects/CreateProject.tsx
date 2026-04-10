@@ -1,57 +1,14 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../services/api";
-import "../../../styles/create-project.css";
+import { getDeptLabel, departmentGroups } from "../../../utils/departments";
+import "../../../styles/modules/student/projects/create-project.css";
 
 const CreateProject = () => {
-  // ✅ Departments
-  const DEPARTMENTS = [
-    {
-      category: "COMMON",
-      items: ["ALL Departments"],
-    },
-    {
-      category: "UG Courses",
-      items: [
-        "B.E. Aeronautical Engineering",
-        "B.E. Bio Medical Engineering",
-        "B.E. Civil Engineering",
-        "B.Arch. Architecture",
-        "B.E. Computer Science and Engineering",
-        "B.E. CSE (Cyber Security)",
-        "B.E. CSE (AI & ML)",
-        "B.E. Electronics and Communication Engineering",
-        "B.E. Electrical and Electronics Engineering",
-        "B.E. Mechanical Engineering",
-        "B.Tech. Bio Technology",
-        "B.Tech. Chemical Engineering",
-        "B.Tech. Information Technology",
-        "B.Tech. AI and Data Science",
-        "B.Tech. CSBS",
-      ],
-    },
-    {
-      category: "PG Courses",
-      items: [
-        "M.E. Communication Systems",
-        "M.E. Computer Science Engineering",
-        "M.E. Engineering Design",
-        "M.E. Power Systems",
-        "M.E. Structural Engineering",
-        "MBA",
-        "MBA Logistics & SCM",
-        "MCA",
-      ],
-    },
-    {
-      category: "Research",
-      items: [
-        "Ph.D CSE",
-        "Ph.D ECE",
-        "Ph.D Mechanical",
-        "Ph.D Chemistry",
-      ],
-    },
-  ];
+  const navigate = useNavigate();
+  const { id } = useParams(); // 🔥 edit mode
+  const isEdit = !!id;
+
 
   const [form, setForm] = useState({
     title: "",
@@ -61,13 +18,33 @@ const CreateProject = () => {
     expectedDate: "",
   });
 
+  const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // close dropdown
+  // ================= FETCH FOR EDIT =================
+  useEffect(() => {
+    if (!isEdit) return;
+
+    const fetchProject = async () => {
+      const res = await api.get(`/projects/${id}`);
+      const p = res.data;
+
+      setForm({
+        title: p.title || "",
+        description: p.description || "",
+        departments: p.departments?.length ? p.departments : ["ALL"],
+        requiredMembers: String(p.required_members || ""),
+        expectedDate: p.expected_completion || "",
+      });
+    };
+
+    fetchProject();
+  }, [id]);
+
+  // ================= CLOSE DROPDOWN =================
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -82,15 +59,14 @@ const CreateProject = () => {
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  // ================= CHANGE =================
+  const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ✅ Department select logic
+  // ================= DEPARTMENT =================
   const toggleDepartment = (dept: string) => {
-    if (dept === "ALL Departments") {
+    if (dept === "ALL") {
       setForm((prev) => ({
         ...prev,
         departments: ["ALL"],
@@ -103,7 +79,6 @@ const CreateProject = () => {
         ? prev.departments.filter((d) => d !== dept)
         : [...prev.departments, dept];
 
-      // ❌ remove ALL if selecting specific
       updated = updated.filter((d) => d !== "ALL");
 
       return { ...prev, departments: updated };
@@ -117,162 +92,187 @@ const CreateProject = () => {
     }));
   };
 
-  // ✅ FIXED FILTER
-  const filteredDepartments = DEPARTMENTS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) =>
-      item.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-  })).filter((group) => group.items.length > 0);
+ const filteredDepartments = departmentGroups.map((group) => ({
+  category: group.label,
+  items: group.options.filter((item) =>
+    item.label.toLowerCase().includes(searchTerm.toLowerCase())
+  ),
+})).filter((g) => g.items.length > 0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  // ================= SUBMIT =================
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
 
-  if (
-    !form.title ||
-    !form.description
-  ) {
-    return alert("Title & Description required");
-  }
+    if (!form.title || !form.description) {
+      return alert("Title & Description required");
+    }
 
-  try {
-    setLoading(true);
+    if (!form.requiredMembers || Number(form.requiredMembers) <= 0) {
+      return alert("Members must be greater than 0");
+    }
 
-    await api.post("/projects", {
-  title: form.title,
-  description: form.description,
-  departments: form.departments,
-  required_members: Number(form.requiredMembers),
-  expected_completion: form.expectedDate,
-});
+    try {
+      setLoading(true);
 
-    alert("Project Created ✅");
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        departments:
+          form.departments.includes("ALL") ? [] : form.departments,
+        required_members: Math.max(1, Number(form.requiredMembers)),
+        expected_completion: form.expectedDate,
+      };
 
-    setForm({
-      title: "",
-      description: "",
-      departments: [],
-      requiredMembers: "",
-      expectedDate: "",
-    });
+      if (isEdit) {
+        // 🔥 UPDATE
+        await api.put(`/projects/${id}`, payload);
+        alert("Project Updated ✅");
+      } else {
+        // 🔥 CREATE
+        await api.post("/projects", payload);
+        alert("Project Created ✅");
+      }
 
-  } catch (err: any) {
-    alert(err?.response?.data?.detail || "Error creating project");
-  } finally {
-    setLoading(false);
-  }
-};
+      navigate("/student/my-projects");
+
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || "Error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="cp-page">
-      <div className="cp-card">
-        <div className="cp-header">
-          <h1>Create New Project</h1>
-          <p>Build something meaningful with your team</p>
+  <div className="cp-page">
+    <div className="cp-card">
+      <button onClick={() => navigate(-1)}>← Back</button>
+
+      <div className="cp-header">
+        <h1>{isEdit ? "Edit Project" : "Create New Project"}</h1>
+        <p>Build something meaningful with your team</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="cp-form">
+
+        {/* TITLE */}
+        <div className="cp-field">
+          <label>Project Title</label>
+          <input
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            placeholder="Enter title"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="cp-form">
+        {/* DESCRIPTION */}
+        <div className="cp-field">
+          <label>Description</label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            placeholder="Enter description"
+          />
+        </div>
+
+        {/* GRID */}
+        <div className="cp-grid">
+
           <div className="cp-field">
-            <label>Project Title</label>
-            <input name="title" value={form.title} onChange={handleChange} />
+            <label>Members</label>
+            <input
+              type="number"
+              name="requiredMembers"
+              value={form.requiredMembers}
+              onChange={handleChange}
+              placeholder="Enter members"
+            />
           </div>
 
           <div className="cp-field">
-            <label>Description</label>
-            <textarea
-              name="description"
-              value={form.description}
+            <label>Completion Date</label>
+            <input
+              type="date"
+              name="expectedDate"
+              value={form.expectedDate}
               onChange={handleChange}
             />
           </div>
 
-          <div className="cp-grid">
-            <div className="cp-field">
-              <label>Members</label>
-              <input
-                type="number"
-                name="requiredMembers"
-                value={form.requiredMembers}
-                onChange={handleChange}
-              />
-            </div>
+        </div>
 
-            <div className="cp-field">
-              <label>Completion Date</label>
-              <input
-                type="date"
-                name="expectedDate"
-                value={form.expectedDate}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
+        {/* DEPARTMENTS */}
+        <div className="cp-field" ref={dropdownRef}>
+          <label>Departments</label>
 
-          {/* Departments */}
-          <div className="cp-field" ref={dropdownRef}>
-            <label>Departments</label>
-
-            <div
-              className="cp-multi"
-              onClick={() => setDropdownOpen(true)}
-            >
-              {form.departments.map((d) => (
-                <span key={d} className="cp-chip">
-                  {d === "ALL" ? "ALL Departments" : d}
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeDepartment(d);
-                    }}
-                  >
-                    ×
-                  </span>
+          <div
+            className="cp-multi"
+            onClick={() => setDropdownOpen(true)}
+          >
+            {form.departments.map((d) => (
+              <span key={d} className="cp-chip">
+                {d === "ALL" ? "ALL Departments" : getDeptLabel(d)}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeDepartment(d);
+                  }}
+                >
+                  ×
                 </span>
-              ))}
+              </span>
+            ))}
 
-              <input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {dropdownOpen && (
-              <div className="cp-dropdown">
-                {filteredDepartments.length === 0 && (
-                  <div className="cp-empty">No departments found</div>
-                )}
-
-                {filteredDepartments.map((group) => (
-                  <div key={group.category}>
-                    <div className="cp-group-title">{group.category}</div>
-
-                    {group.items.map((dept) => (
-                      <div
-                        key={dept}
-                        className={`cp-item ${
-                          form.departments.includes("ALL") ||
-                          form.departments.includes(dept)
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() => toggleDepartment(dept)}
-                      >
-                        {dept}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
+            <input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
-          <button className="cp-btn">
-            {loading ? "Launching..." : "🚀 Launch Project"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
+          {dropdownOpen && (
+            <div className="cp-dropdown">
+              {filteredDepartments.map((group) => (
+                <div key={group.category}>
+                  <div className="cp-group-title">
+                    {group.category}
+                  </div>
 
+                  {group.items.map((dept) => (
+  <div
+    key={dept.value}
+    className={`cp-item ${
+      form.departments.includes("ALL") ||
+      form.departments.includes(dept.value)
+        ? "active"
+        : ""
+    }`}
+    onClick={() => toggleDepartment(dept.value)}
+  >
+    {dept.label}
+  </div>
+))}
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+
+        {/* BUTTON */}
+        <button className="cp-btn">
+          {loading
+            ? "Saving..."
+            : isEdit
+            ? "Update Project"
+            : "🚀 Launch Project"}
+        </button>
+
+      </form>
+
+    </div>
+  </div>
+);
+};
 export default CreateProject;

@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../../../../services/api";
-import "../../../../styles/Member-Projects-Details.css";
+
+import "../../../../styles/modules/student/projects/Member-Projects-Details/Member-Projects-Details.css";
 
 import MembersTab from "./tabs/MembersTab";
 import TasksTab from "./tabs/TasksTab";
@@ -32,53 +33,124 @@ const MemberProjectsDetails = () => {
   }, [id]);
 
   // ================= ACTION =================
-  const leaveProject = async () => {
+ const leaveProject = async () => {
+
+  const confirmLeave = window.confirm(
+    "Are you sure you want to leave this project?"
+  );
+
+  if (!confirmLeave) return;
+
+  try {
+
     await API.post(`/projects/${id}/leave`);
-    navigate("/member-projects");
-  };
+
+    alert("You left the project successfully");
+
+    navigate("/student/member-projects");
+
+  } catch (err) {
+    console.error("Leave failed:", err);
+    alert("Failed to leave project");
+  }
+};
 
   if (!project) return <p>Loading...</p>;
 
   return (
     <div className="pd-container">
 
+      {/* BACK */}
       <button onClick={() => navigate(-1)}>← Back</button>
 
-      {/* TOP CARD */}
+      {/* ================= PROJECT CARD ================= */}
       <div className="pd-glass">
+
+        {/* HEADER */}
         <div className="pd-top">
           <h2>{project.title}</h2>
-          <span className="pd-status">
+
+          <span
+            className={`pd-status ${
+              project.status === "active" ? "active" : "closed"
+            }`}
+          >
             {project.status === "active" ? "Open" : "Closed"}
           </span>
         </div>
 
+        {/* DESCRIPTION */}
         <p className="pd-desc">{project.description}</p>
 
-        <p>
-          Members: {project.members_count}/{project.required_members}
-        </p>
+        {/* DETAILS */}
+        <div className="pd-details">
+          <p>
+            <strong>Members:</strong>{" "}
+            {project.members_count}/{project.required_members}
+          </p>
 
-        <button className="danger" onClick={leaveProject}>
-          Leave Project
-        </button>
+          <p>
+            <strong>Department:</strong>{" "}
+            {project.departments?.join(", ") || "Not specified"}
+          </p>
+
+          <p>
+            <strong>Expected Completion:</strong>{" "}
+            {project.expected_completion || "Not set"}
+          </p>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="pd-actions">
+
+          <div className="pd-btn-group">
+            <button className="danger" onClick={leaveProject}>
+              Leave Project
+            </button>
+          </div>
+
+        </div>
+
       </div>
 
-      {/* TABS */}
+      {/* ================= TABS ================= */}
       <div className="pd-tabs">
-        <button onClick={() => setTab("members")}>Members</button>
-        <button onClick={() => setTab("tasks")}>Tasks</button>
-        <button onClick={() => setTab("mentor")}>Mentor</button>
+
+        <button
+          className={tab === "members" ? "active" : ""}
+          onClick={() => setTab("members")}
+        >
+          Members
+        </button>
+
+        <button
+          className={tab === "tasks" ? "active" : ""}
+          onClick={() => setTab("tasks")}
+        >
+          Tasks
+        </button>
+
+        <button
+          className={tab === "mentor" ? "active" : ""}
+          onClick={() => setTab("mentor")}
+        >
+          Mentor
+        </button>
+
       </div>
 
-      {/* CONTENT */}
+      {/* ================= CONTENT ================= */}
       <div className="pd-content">
 
         {tab === "members" && (
-          <MembersTab members={members} navigate={navigate} />
+          <MembersTab
+            members={members}
+            navigate={navigate}
+          />
         )}
 
         {tab === "tasks" && <TasksTab />}
+
         {tab === "mentor" && <MentorTab />}
 
       </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API, { publicAPI } from "../../../../services/api";
-import "../../../../styles/student-profileEdit.css";
+import "../../../../styles/modules/student/profile/student-profileEdit.css";
 import { FaTrash, FaDownload, FaCheckCircle, FaGithub, FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import Cropper from "react-easy-crop";
+import Select from "react-select";
 import { getCroppedImg } from "../../../../utils/cropImage";
+import { allDepartments, getDeptLabel, getDeptCode } from "../../../../utils/departments";
 
 interface Profile {
   name?: string;
@@ -23,6 +25,7 @@ interface Profile {
   whatsapp?: string;
   image?: string;
   resume?: string;
+  skills: string;
 }
 
 interface FormData {
@@ -43,47 +46,13 @@ interface FormData {
   whatsapp: string;
   imageFile: File | null;
   resumeFile: File | null;
+  skills: string;
 }
 
 // Degree options
 const degreeOptions = {
   UG: ["B.E.", "B.Tech", "B.Arch"],
   PG: ["M.E.", "MBA", "MCA"],
-};
-
-// Department mapping
-const departmentMap: Record<string, string[]> = {
-  "B.E.": [
-    "Aeronautical Engineering",
-    "Bio Medical Engineering",
-    "Civil Engineering",
-    "Computer Science and Engineering",
-    "Computer Science and Engineering (Cyber Security)",
-    "Computer Science and Engineering (Artificial Intelligence and Machine Learning)",
-    "Electronics and Communication Engineering",
-    "Electrical and Electronics Engineering",
-    "Mechanical Engineering",
-  ],
-  "B.Tech": [
-    "Bio Technology",
-    "Chemical Engineering",
-    "Information Technology",
-    "AI and Data Science",
-    "Computer Science and Business Systems",
-  ],
-  "B.Arch": ["Architecture"],
-  "M.E.": [
-    "Communication System Engineering",
-    "Computer Science Engineering",
-    "Engineering Design",
-    "Power System Engineering",
-    "Structural Engineering",
-  ],
-  "MBA": [
-    "General (Full Time / Part Time)",
-    "Logistics and Supply Chain Management",
-  ],
-  "MCA": ["Master of Computer Application"],
 };
 
 // Year options
@@ -196,45 +165,73 @@ const OtpModal = ({
   );
 };
 
+const selectStyles = {
+  control: (base: any) => ({
+    ...base,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    color: "#fff",
+    minHeight: "42px",
+  }),
+  menu: (base: any) => ({
+    ...base,
+    background: "#0f172a",
+    zIndex: 9999,
+  }),
+  singleValue: (base: any) => ({
+    ...base,
+    color: "#fff",
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    background: state.isFocused ? "#6366f1" : "#0f172a",
+    color: "#fff",
+  }),
+};
+
 const ProfileEdit = () => {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<FormData>({
-    name: "",
-    registerNo: "",
-    email: "",
-    mobile: "",
-    dob: "",
-    gender: "",
-    bio: "",
-    levelOfStudy: "",
-    degree: "",
-    department: "",
-    year: "",
-    batch: "",
-    github: "",
-    linkedin: "",
-    whatsapp: "",
-    imageFile: null,
-    resumeFile: null,
-  });
-  const [initialForm, setInitialForm] = useState<Omit<FormData, "imageFile" | "resumeFile">>({
-    name: "",
-    registerNo: "",
-    email: "",
-    mobile: "",
-    dob: "",
-    gender: "",
-    bio: "",
-    levelOfStudy: "",
-    degree: "",
-    department: "",
-    year: "",
-    batch: "",
-    github: "",
-    linkedin: "",
-    whatsapp: "",
-  });
+const [form, setForm] = useState<FormData>({
+  name: "",
+  registerNo: "",
+  email: "",
+  mobile: "",
+  dob: "",
+  gender: "",
+  bio: "",
+  levelOfStudy: "",
+  degree: "",
+  department: "",
+  year: "",
+  batch: "",
+  github: "",
+  linkedin: "",
+  whatsapp: "",
+  skills: "",
+  imageFile: null,
+  resumeFile: null,
+});
+
+const [initialForm, setInitialForm] = useState<Omit<FormData, "imageFile" | "resumeFile">>({
+  name: "",
+  registerNo: "",
+  email: "",
+  mobile: "",
+  dob: "",
+  gender: "",
+  bio: "",
+  skills: "",   // ADD THIS
+  levelOfStudy: "",
+  degree: "",
+  department: "",
+  year: "",
+  batch: "",
+  github: "",
+  linkedin: "",
+  whatsapp: "",
+});
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [resumeFileName, setResumeFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -269,30 +266,51 @@ const ProfileEdit = () => {
   return `http://localhost:8000/${cleanPath}`;
 };
 
-  const isChanged = () => {
-    const current = {
-      name: form.name,
-      registerNo: form.registerNo,
-      email: form.email,
-      mobile: form.mobile,
-      dob: form.dob,
-      gender: form.gender,
-      bio: form.bio,
-      levelOfStudy: form.levelOfStudy,
-      degree: form.degree,
-      department: form.department,
-      year: form.year,
-      batch: form.batch,
-      github: form.github,
-      linkedin: form.linkedin,
-      whatsapp: form.whatsapp,
-    };
-    return (
-  JSON.stringify(current) !== JSON.stringify(initialForm) ||
-  form.imageFile !== null ||
-  form.resumeFile !== null
-);
+ const isChanged = () => {
+  const current = {
+    name: form.name || "",
+    registerNo: form.registerNo || "",
+    email: form.email || "",
+    mobile: form.mobile || "",
+    dob: form.dob || "",
+    gender: form.gender || "",
+    bio: form.bio || "",
+    levelOfStudy: form.levelOfStudy || "",
+    degree: form.degree || "",
+    department: form.department || "",
+    year: form.year || "",
+    batch: form.batch || "",
+    github: form.github || "",
+    linkedin: form.linkedin || "",
+    whatsapp: form.whatsapp || "",
+    skills: form.skills || "",
   };
+
+  const initial = {
+    name: initialForm.name || "",
+    registerNo: initialForm.registerNo || "",
+    email: initialForm.email || "",
+    mobile: initialForm.mobile || "",
+    dob: initialForm.dob || "",
+    gender: initialForm.gender || "",
+    bio: initialForm.bio || "",
+    levelOfStudy: initialForm.levelOfStudy || "",
+    degree: initialForm.degree || "",
+    department: initialForm.department || "",
+    year: initialForm.year || "",
+    batch: initialForm.batch || "",
+    github: initialForm.github || "",
+    linkedin: initialForm.linkedin || "",
+    whatsapp: initialForm.whatsapp || "",
+    skills: initialForm.skills || "",
+  };
+
+  return (
+    JSON.stringify(current) !== JSON.stringify(initial) ||
+    form.imageFile !== null ||
+    form.resumeFile !== null
+  );
+};
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -314,10 +332,11 @@ const ProfileEdit = () => {
           mobile: data.mobile || "",
           dob: data.dob || "",
           gender: data.gender || "",
+          skills: data.skills || "",
           bio: data.bio || "",
           levelOfStudy: levelOfStudy,
           degree: data.degree || "",
-          department: data.department || "",
+          department: getDeptCode(data.department || ""),
           year: data.year || "",
           batch: data.batch || "",
           github: data.github || "",
@@ -334,9 +353,10 @@ const ProfileEdit = () => {
           dob: data.dob || "",
           gender: data.gender || "",
           bio: data.bio || "",
+          skills: data.skills || "",
           levelOfStudy: levelOfStudy,
           degree: data.degree || "",
-          department: data.department || "",
+          department: getDeptCode(data.department || ""),
           year: data.year || "",
           batch: data.batch || "",
           github: data.github || "",
@@ -539,6 +559,7 @@ const ProfileEdit = () => {
       formData.append("degree", form.degree);
       formData.append("year", form.year);
       formData.append("bio", form.bio);
+      formData.append("skills", form.skills);
       formData.append("dob", form.dob);
       formData.append("gender", form.gender);
       formData.append("github", form.github);
@@ -562,26 +583,33 @@ const ProfileEdit = () => {
         savedLevel = "PG";
       }
       
-      const newInitialForm = {
-        name: data.name || "",
-        registerNo: data.registerNo || "",
-        email: data.email || "",
-        mobile: data.mobile || "",
-        dob: data.dob || "",
-        gender: data.gender || "",
-        bio: data.bio || "",
-        levelOfStudy: savedLevel,
-        degree: data.degree || "",
-        department: data.department || "",
-        year: data.year || "",
-        batch: data.batch || "",
-        github: data.github || "",
-        linkedin: data.linkedin || "",
-        whatsapp: data.whatsapp || "",
-      };
+const newInitialForm = {
+  name: data.name || "",
+  registerNo: data.registerNo || "",
+  email: data.email || "",
+  mobile: data.mobile || "",
+  dob: data.dob || "",
+  gender: data.gender || "",
+  bio: data.bio || "",
+  skills: data.skills || "",   // ADD THIS
+  levelOfStudy: savedLevel,
+  degree: data.degree || "",
+  department: getDeptCode(data.department || ""),
+  year: data.year || "",
+  batch: data.batch || "",
+  github: data.github || "",
+  linkedin: data.linkedin || "",
+  whatsapp: data.whatsapp || "",
+};
       
-      setInitialForm(newInitialForm);
-      setForm((prev) => ({ ...prev, ...newInitialForm, imageFile: null, resumeFile: null }));
+setInitialForm(newInitialForm);
+
+setForm((prev) => ({
+  ...prev,
+  ...newInitialForm,
+  imageFile: null,
+  resumeFile: null,
+}));
       
       if (data.image) {
   const url = getFullUrl(data.image);
@@ -618,7 +646,6 @@ const ProfileEdit = () => {
   };
 
   const degreeList = form.levelOfStudy === "UG" ? degreeOptions.UG : degreeOptions.PG;
-  const departments = departmentMap[form.degree] || [];
   const years = form.levelOfStudy === "UG" ? yearOptions.UG : yearOptions.PG;
   const batches = form.levelOfStudy === "UG" ? batchOptions.UG : batchOptions.PG;
   const genderOptions = ["Male", "Female", "Other"];
@@ -797,53 +824,93 @@ const ProfileEdit = () => {
 
         {/* Row 3: Description */}
         <textarea name="bio" placeholder="Bio / Description" rows={3} value={form.bio} onChange={handleChange} />
+
+        <input
+  type="text"
+  name="skills"
+  placeholder="Skills (comma separated e.g. React,Python,FastAPI)"
+  value={form.skills || ""}
+  onChange={handleChange}
+/>
+
 <h3>Academic detail</h3>
         {/* Row 4: Level | Degree | Department */}
-        <div className="grid-3">
-          <select name="levelOfStudy" value={form.levelOfStudy} onChange={handleLevelChange}>
-            <option value="">Level of Study</option>
-            <option value="UG">UG</option>
-            <option value="PG">PG</option>
-          </select>
+<div className="grid-3">
+  <Select
+    styles={selectStyles}
+    placeholder="Level of Study"
+    options={[
+      { label: "UG", value: "UG" },
+      { label: "PG", value: "PG" },
+    ]}
+    value={
+      form.levelOfStudy
+        ? { label: form.levelOfStudy, value: form.levelOfStudy }
+        : null
+    }
+    onChange={(opt: any) =>
+      handleLevelChange({
+        target: { value: opt?.value || "" },
+      } as any)
+    }
+  />
 
-          <select name="degree" value={form.degree} onChange={handleChange} disabled={!form.levelOfStudy}>
-            <option value="">Select Degree</option>
-            {degreeList.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+  <Select
+    styles={selectStyles}
+    placeholder="Select Degree"
+    isDisabled={!form.levelOfStudy}
+    options={degreeList.map((d) => ({ label: d, value: d }))}
+    value={
+      form.degree
+        ? { label: form.degree, value: form.degree }
+        : null
+    }
+    onChange={(opt: any) =>
+      setForm((prev) => ({ ...prev, degree: opt?.value || "" }))
+    }
+  />
 
-          <select name="department" value={form.department} onChange={handleChange} disabled={!form.degree}>
-            <option value="">Select Department</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
+  <Select
+    styles={selectStyles}
+    placeholder="Select Department"
+    isDisabled={!form.degree}
+    options={allDepartments}
+    value={
+  form.department
+    ? {
+        label: getDeptLabel(form.department),
+        value: form.department,
+      }
+    : null
+}
+    onChange={(opt: any) =>
+      setForm((prev) => ({ ...prev, department: opt?.value || "" }))
+    }
+  />
+</div>
 
-        {/* Row 5: Year | Batch | Upload Resume */}
-        <div className="grid-3">
-          <select name="year" value={form.year} onChange={handleChange} disabled={!form.department}>
-            <option value="">Select Year</option>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+<div className="grid-3">
+  <Select
+    styles={selectStyles}
+    placeholder="Select Year"
+    isDisabled={!form.department}
+    options={years.map((y) => ({ label: y, value: y }))}
+    value={form.year ? { label: form.year, value: form.year } : null}
+    onChange={(opt: any) =>
+      setForm((prev) => ({ ...prev, year: opt?.value || "" }))
+    }
+  />
 
-          <select name="batch" value={form.batch} onChange={handleChange} disabled={!form.year}>
-            <option value="">Select Batch</option>
-            {batches.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
+  <Select
+    styles={selectStyles}
+    placeholder="Select Batch"
+    isDisabled={!form.year}
+    options={batches.map((b) => ({ label: b, value: b }))}
+    value={form.batch ? { label: form.batch, value: form.batch } : null}
+    onChange={(opt: any) =>
+      setForm((prev) => ({ ...prev, batch: opt?.value || "" }))
+    }
+  />
 
           <div className="resume-upload-wrapper">
             <label htmlFor="resume-upload" className="resume-upload-button">

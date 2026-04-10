@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../../services/api";
-import "../../../styles/member-projects.css";
+import "../../../styles/modules/student/projects/member-projects.css";
 
 const MemberProjects = () => {
+
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<"working" | "completed">("working");
@@ -11,28 +12,20 @@ const MemberProjects = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ================= FETCH =================
+  // ================= FETCH PROJECTS =================
   const fetchProjects = async () => {
     try {
+
       setLoading(true);
 
-      const res = await API.get("/projects/search", {
-        params: {
-          status: tab === "working" ? "open" : "closed"
-        }
-      });
-
-      // 🔥 ONLY MEMBER PROJECTS
-      const memberProjects = res.data.data.filter(
-        (p: any) =>
-          !p.is_owner && p.join_status === "accepted"
-      );
-
-      setProjects(memberProjects);
+const res = await API.get("/projects/member");
+setProjects(res.data.data);
 
     } catch (err) {
+
       console.error("FETCH ERROR:", err);
       setProjects([]);
+
     } finally {
       setLoading(false);
     }
@@ -43,24 +36,34 @@ const MemberProjects = () => {
     fetchProjects();
   }, [tab]);
 
-  // ================= FILTER =================
-  const filtered = projects.filter((p) =>
+  // ================= SEARCH FILTER =================
+ const filteredProjects = projects
+  .filter((p) =>
+    tab === "working"
+      ? p.status === "active"
+      : p.status === "completed" || p.status === "closed"
+  )
+  .filter((p) =>
     p.title.toLowerCase().includes(search.toLowerCase())
   );
-
   return (
     <div className="mp-container">
 
-      {/* BACK */}
-      <button className="mp-back" onClick={() => navigate(-1)}>
+      {/* BACK BUTTON */}
+      <button
+        className="mp-back"
+        onClick={() => navigate(-1)}
+      >
         ← Back
       </button>
 
+      {/* TITLE */}
       <h1>Member Projects</h1>
 
       {/* TOP BAR */}
       <div className="mp-topbar">
 
+        {/* SEARCH */}
         <input
           type="text"
           placeholder="Search projects..."
@@ -69,7 +72,9 @@ const MemberProjects = () => {
           className="mp-search"
         />
 
+        {/* TAB TOGGLE */}
         <div className="mp-tab-toggle">
+
           <button
             className={tab === "working" ? "active" : ""}
             onClick={() => setTab("working")}
@@ -83,6 +88,7 @@ const MemberProjects = () => {
           >
             Completed
           </button>
+
         </div>
 
       </div>
@@ -90,65 +96,87 @@ const MemberProjects = () => {
       {/* ================= CONTENT ================= */}
 
       {loading ? (
-        <p>Loading projects...</p>
-      ) : filtered.length === 0 ? (
-        <p>No member projects found</p>
+
+        <p className="mp-empty">Loading projects...</p>
+
+      ) : filteredProjects.length === 0 ? (
+
+        <p className="mp-empty">No member projects found</p>
+
       ) : (
+
         <div className="mp-grid">
-          {filtered.map((p) => (
+
+          {filteredProjects.map((p) => (
+
             <div key={p.id} className="mp-card">
 
               {/* HEADER */}
               <div className="mp-card-header">
-                <div className="mp-owner">
-                  <span className="mp-avatar">👤</span>
-                  <span>{p.owner?.name}</span>
-                </div>
 
+                <div className="mp-owner">
+                <img
+                  src={
+                    p.owner?.image
+                      ? `http://localhost:8000${p.owner.image}`
+                      : "/default-avatar.png"
+                  }
+                  className="mp-avatar"
+                />
+
+                <span>{p.owner?.name || "Unknown"}</span>
+
+              </div>
                 <span className="mp-badge">
-                  {p.status === "active" ? "Open" : "Closed"}
+                  {p.status === "active" ? "Working" : "Completed"}
                 </span>
+
               </div>
 
-              {/* CONTENT */}
+              {/* TITLE */}
               <h2 className="mp-title">{p.title}</h2>
-              <p className="mp-desc">{p.description}</p>
+
+              {/* DESCRIPTION */}
+              <p className="mp-desc">
+                {p.description?.slice(0, 120)}...
+              </p>
 
               {/* DETAILS */}
               <div className="mp-details-grid">
+
                 <div>
-                  <span>Owner Name</span>
+                  <span>Owner</span>
                   <p>{p.owner?.name}</p>
                 </div>
 
                 <div>
                   <span>Department</span>
-                  <p>{p.owner?.department}</p>
+                  <p>{p.owner?.department || "—"}</p>
                 </div>
 
                 <div>
                   <span>Members</span>
                   <p>{p.members_count}/{p.required_members}</p>
                 </div>
+
               </div>
 
-              {/* BUTTON */}
+              {/* ACTION */}
               <button
                 className="mp-btn"
                 onClick={() =>
-                  navigate(
-                    p.status === "active"
-                      ? `/student/member-projects/${p.id}`
-                      : `/student/member-projects/${p.id}/completed`
-                  )
+                  navigate(`/student/member-projects/${p.id}`)
                 }
               >
-                View Project
+                Your Member Project
               </button>
 
             </div>
+
           ))}
+
         </div>
+
       )}
 
     </div>

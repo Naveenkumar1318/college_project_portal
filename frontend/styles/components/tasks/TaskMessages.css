@@ -1,0 +1,59 @@
+.task-chat {
+  margin-top: 20px;
+  border-top: 1px solid #333;
+  padding-top: 15px;
+}
+
+.task-chat-messages {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.task-msg {
+  margin-bottom: 12px;
+}
+
+.task-msg-user {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.task-msg-text {
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-top: 3px;
+}
+
+.task-msg.student .task-msg-text {
+  background: #1e293b;
+  color: #4ade80;
+}
+
+.task-msg.mentor .task-msg-text {
+  background: #1e293b;
+  color: #60a5fa;
+}
+
+.task-msg.admin .task-msg-text {
+  background: #1e293b;
+  color: #f59e0b;
+}
+
+.task-chat-input {
+  display: flex;
+  gap: 10px;
+}
+
+.task-chat-input input {
+  flex: 1;
+  padding: 8px;
+}
+
+.task-chat-input button {
+  padding: 8px 15px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  cursor: pointer;
+}

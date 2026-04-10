@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { loginUser } from "../../services/auth.service";
 import { useAuth } from "../../context/AuthContext";
-import "../../styles/Login.css";
+import "../../styles/pages/auth/Login.css";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     id: "",
@@ -39,6 +40,8 @@ const Login = () => {
   };
 
 const handleLogin = async () => {
+  if (loading) return;
+  setLoading(true);
   setError("");
 
   if (!form.id.trim() && !form.password.trim()) {
@@ -57,21 +60,28 @@ const handleLogin = async () => {
   }
 
   try {
-    const res = await loginUser(form);
+const res = await loginUser({
+  ...form,
+  role: userRole
+});
 
-    // ✅ NEW: use context
-    login(res.access_token);
+
+await login(res.access_token);
 
     switch (res.role) {
+
       case "student":
         navigate("/student/dashboard");
         break;
+
       case "mentor":
         navigate("/mentor/dashboard");
         break;
+
       case "admin":
         navigate("/admin/dashboard");
         break;
+
       default:
         navigate("/");
     }
@@ -129,9 +139,13 @@ const handleLogin = async () => {
           Forgot Password?
         </div>
 
-        <button className="login-btn" onClick={handleLogin}>
-          SECURE LOGIN
-        </button>
+      <button
+        className="login-btn"
+        onClick={handleLogin}
+        disabled={loading}
+      >
+        {loading ? "Logging in..." : "SECURE LOGIN"}
+      </button>
 
       </div>
 

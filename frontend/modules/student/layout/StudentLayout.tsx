@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import StudentSidebar from "./StudentSidebar";
-import "../../../styles/student-layout.css";
+import "../../../styles/modules/student/layout/student-layout.css";
 
 const StudentLayout = () => {
   return (

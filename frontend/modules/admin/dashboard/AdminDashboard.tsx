@@ -1,48 +1,94 @@
 import { useEffect, useState } from "react";
-import api from "../../../services/api";
+import { useNavigate } from "react-router-dom";
+import API from "../../../services/api";
 
-interface DashboardData {
-  projects: number;
-  mentors: number;
-  students: number;
+import "../../../styles/modules/admin/dashboard/admin-dashboard.css";
+
+interface Stats {
+  totalProjects: number;
+  completedProjects: number;
+  workingProjects: number;
 }
 
 const AdminDashboard = () => {
-  const [data, setData] = useState<DashboardData | null>(null);
+
+  const navigate = useNavigate();
+
+  const [stats, setStats] = useState<Stats>({
+    totalProjects: 0,
+    completedProjects: 0,
+    workingProjects: 0
+  });
+
+  // FETCH ADMIN STATS
+  const fetchStats = async () => {
+    try {
+
+      const res = await API.get("/admin/dashboard/stats");
+      setStats(res.data);
+
+    } catch (err) {
+      console.error("Admin stats error:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const res = await api.get("/dashboard/stats");
-        setData(res.data);
-      } catch (err) {
-        console.error("Admin dashboard error:", err);
-      }
-    };
-
-    fetchDashboard();
+    fetchStats();
   }, []);
 
-  if (!data) return <p>Loading admin dashboard...</p>;
-
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
 
-      <div className="grid grid-cols-3 gap-6">
-        <Card title="Projects" value={data.projects} />
-        <Card title="Mentors" value={data.mentors} />
-        <Card title="Students" value={data.students} />
+    <div className="admin-dashboard">
+
+      <h2>Admin Dashboard</h2>
+
+      {/* ===== STATS ===== */}
+
+      <div className="admin-stats">
+
+        <div className="admin-stat-card">
+          <h4>Total Projects</h4>
+          <span>{stats.totalProjects}</span>
+        </div>
+
+        <div className="admin-stat-card">
+          <h4>Completed Projects</h4>
+          <span>{stats.completedProjects}</span>
+        </div>
+
+        <div className="admin-stat-card">
+          <h4>Current Working</h4>
+          <span>{stats.workingProjects}</span>
+        </div>
+
       </div>
-    </div>
-  );
-};
 
-const Card = ({ title, value }: { title: string; value: number }) => (
-  <div className="bg-white p-5 rounded-xl shadow">
-    <h3 className="text-gray-500">{title}</h3>
-    <p className="text-2xl font-bold">{value}</p>
-  </div>
-);
+      {/* ===== ACTION CARDS ===== */}
+
+      <div className="admin-cards">
+
+        <div
+          className="admin-card"
+          onClick={() => navigate("/admin/projects")}
+        >
+          <h3>Projects View</h3>
+          <p>View all system projects</p>
+        </div>
+
+        <div
+          className="admin-card"
+          onClick={() => navigate("/admin/manage")}
+        >
+          <h3>Manage Projects</h3>
+          <p>Approve / manage requests</p>
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+};
 
 export default AdminDashboard;

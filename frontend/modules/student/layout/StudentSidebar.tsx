@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import "../../../styles/student-sidebar.css";
+import "../../../styles/modules/student/layout/student-sidebar.css";
 
 const StudentSidebar = () => {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import "../../styles/Register.css";
+import "../../styles/pages/auth/Register.css";
 import { registerUser } from "../../services/auth.service";
 
 type Role = "student" | "mentor";

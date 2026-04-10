@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import "../../../styles/My-project-completed.css";
+import "../../../styles/modules/student/projects/My-project-completed.css";
 
 const CompletedProject = () => {
   const { id } = useParams();

@@ -31,6 +31,23 @@ import StudentProfile from "../modules/student/profile/StudentProfile";
 import ProfileEdit from "../modules/student/profile/components/ProfileEdit";
 
 
+import MentorLayout from "../modules/mentor/layout/MentorLayout";
+import MentorDashboard from "../modules/mentor/dashboard/MentorDashboard";
+import MentorRequests from "../modules/mentor/requests/MentorRequests";
+import MentorProfile from "../modules/mentor/profile/MentorProfile";
+import MentorProfileEdit from "../modules/mentor/profile/MentorProfileEdit";
+
+import MentorWorkingProjects from "../modules/mentor/projects/MentorWorkingProjects";
+import MentorProjectDetails from "../modules/mentor/projects/MentorProjectDetails/MentorProjectDetails";
+
+
+import AdminLayout from "../modules/admin/layout/AdminLayout";
+import AdminDashboard from "../modules/admin/dashboard/AdminDashboard";
+import AdminProjects from "../modules/admin/projects/AdminProjects";
+import AdminProjectDetails from "../modules/admin/projects/AdminProjectDetails/AdminProjectDetails";
+import AdminCompletionRequests from "../modules/admin/manage/AdminCompletionRequests";
+
+
 // ================= PROTECTED ROUTE =================
 const ProtectedRoute = ({ children, role }: any) => {
   const { user, loading } = useAuth();
@@ -38,8 +55,8 @@ const ProtectedRoute = ({ children, role }: any) => {
   if (loading) return <div>Loading...</div>;
 
   if (!user) {
-    return <Navigate to="/login/student" replace />;
-  }
+  return <Navigate to="/login/student" replace />;
+}
 
   if (role && user.role !== role) {
     return <Navigate to="/" replace />;
@@ -105,10 +122,59 @@ const AppRoutes = () => {
 
         <Route path="projects/search" element={<SearchProjects />} />
         <Route path="projects/create" element={<CreateProject />} />
+        <Route path="projects/edit/:id" element={<CreateProject />} />
 
         <Route path="profile" element={<StudentProfile />} />
+        <Route path="profile/:user_id" element={<StudentProfile />} />
         <Route path="profile/edit" element={<ProfileEdit />} />
       </Route>
+
+      {/* MENTOR */}
+<Route
+  path="/mentor"
+  element={
+    <ProtectedRoute role="mentor">
+      <MentorLayout />
+    </ProtectedRoute>
+  }
+>
+
+  {/* DEFAULT */}
+  <Route index element={<Navigate to="dashboard" replace />} />
+
+  <Route path="dashboard" element={<MentorDashboard />} />
+
+  <Route path="projects" element={<MentorWorkingProjects />} />
+
+  <Route path="projects/:id" element={<MentorProjectDetails />} />
+
+  <Route path="requests" element={<MentorRequests />} />
+
+  <Route path="profile" element={<MentorProfile />} />
+
+  <Route path="profile/edit" element={<MentorProfileEdit />} />
+
+  <Route path="student/:user_id" element={<StudentProfile />} />
+
+</Route>
+
+
+<Route
+ path="/admin"
+ element={
+   <ProtectedRoute role="admin">
+     <AdminLayout />
+   </ProtectedRoute>
+ }
+>
+
+ <Route path="dashboard" element={<AdminDashboard />} />
+ <Route path="projects" element={<AdminProjects />} />
+ <Route path="projects/:id" element={<AdminProjectDetails />} />
+ <Route path="completion-requests" element={<AdminCompletionRequests />} />
+  <Route path="student/:user_id" element={<StudentProfile />} />
+
+</Route>
 
       {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" />} />

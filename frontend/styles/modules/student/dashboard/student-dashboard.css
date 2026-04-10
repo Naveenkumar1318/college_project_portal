@@ -1,0 +1,98 @@
+/* 🔥 MAIN */
+.sd-container {
+  padding: 30px;
+  color: white;
+}
+
+/* TITLE */
+.sd-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 25px;
+}
+
+/* 🔥 STATS GRID */
+.sd-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+/* 🔥 STAT CARD */
+.sd-card {
+  background: linear-gradient(145deg, #1e293b, #334155);
+  padding: 25px;
+  border-radius: 14px;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ✨ GLOW EFFECT */
+.sd-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, #6366f1, transparent);
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.sd-card:hover::before {
+  opacity: 0.3;
+}
+
+.sd-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+}
+
+/* 🔥 ACTION GRID */
+.sd-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+
+/* 🔥 ACTION CARD */
+.sd-action-card {
+  background: linear-gradient(145deg, #0f172a, #1e293b);
+  padding: 25px;
+  border-radius: 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* ✨ GLOW HOVER */
+.sd-action-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, #6366f1, transparent);
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.sd-action-card:hover::before {
+  opacity: 0.4;
+}
+
+.sd-action-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 35px rgba(99, 102, 241, 0.5);
+}
+
+/* TEXT */
+.sd-action-card h3 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.sd-action-card p {
+  font-size: 14px;
+  color: #cbd5f5;
+}
