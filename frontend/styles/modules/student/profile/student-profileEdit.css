@@ -1,0 +1,364 @@
+/* ================= PAGE ================= */
+.edit-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-self: flex-start;
+  padding: 20px 24px 60px;
+}
+
+/* ================= HEADER ================= */
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.profile-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #00e0ff;
+  cursor: pointer;
+}
+
+/* ================= IMAGE ================= */
+.image-preview-circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 2px solid #00e0ff;
+  overflow: hidden;
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-text {
+  font-size: 12px;
+  color: #00e0ff;
+}
+
+/* ================= FORM ================= */
+.form-scroll-area {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* ================= GLASS CARD (FIXED) ================= */
+.form-scroll-area > div {
+  padding: 20px;
+  border-radius: 16px;
+
+  /* 🔥 KEEP GLASS LOOK WITHOUT BREAKING DROPDOWN */
+  background: rgba(255, 255, 255, 0.06);
+
+  /* ❌ REMOVED backdrop-filter (ROOT ISSUE) */
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+
+  position: relative;
+}
+
+/* ================= GRID ================= */
+.grid-4,
+.grid-3,
+.grid-2 {
+  display: grid;
+  gap: 15px;
+}
+
+.grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* ================= INPUT ================= */
+input,
+select,
+textarea {
+  width: 100%;
+  height: 42px;
+  padding: 10px;
+
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+
+  outline: none;
+}
+
+textarea {
+  height: auto;
+  min-height: 100px;
+}
+
+/* ================= BUTTON ================= */
+.save-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ================= SOCIAL ================= */
+.social-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 0 12px;
+  border-radius: 10px;
+
+  background: rgba(255,255,255,0.06);
+}
+
+.social-field input {
+  border: none;
+  background: transparent;
+  flex: 1;
+}
+
+/* ================= PASSWORD ================= */
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 60px;
+}
+
+.text-btn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #00e0ff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.change-btn {
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ================= RESUME ================= */
+.resume-upload-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 10px;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.resume-upload-button {
+  cursor: pointer;
+  flex: 1;
+  color: #fff;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resume-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.icon-btn.danger {
+  background: rgba(255, 80, 80, 0.2);
+}
+
+/* ================= CROP MODAL ================= */
+.crop-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+}
+
+.crop-modal-content {
+  width: 420px;
+  max-width: 90%;
+  padding: 20px;
+  border-radius: 16px;
+
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(10px);
+
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.crop-container {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.crop-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.crop-controls button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.crop-controls button:first-child {
+  background: #444;
+  color: #fff;
+}
+
+.crop-controls button:last-child {
+  background: #6366f1;
+  color: #fff;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid-4,
+  .grid-3,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+/* ================= REACT SELECT FIX ================= */
+
+/* Wrapper fix */
+.grid-3 > div,
+.grid-2 > div {
+  width: 100%;
+}
+
+/* Control (main box) */
+.react-select__control {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  min-height: 42px !important;
+  box-shadow: none !important;
+}
+
+/* Hover */
+.react-select__control:hover {
+  border-color: #6366f1 !important;
+}
+
+/* Focus */
+.react-select__control--is-focused {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 10px rgba(99,102,241,0.5) !important;
+}
+
+/* Text color */
+.react-select__single-value {
+  color: #fff !important;
+}
+
+/* Placeholder */
+.react-select__placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Dropdown menu */
+.react-select__menu {
+  background: #0f172a !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  z-index: 9999 !important;
+}
+
+/* Options */
+.react-select__option {
+  background: #0f172a !important;
+  color: #fff !important;
+}
+
+/* Hover option */
+.react-select__option--is-focused {
+  background: rgba(99,102,241,0.2) !important;
+}
+
+/* Selected option */
+.react-select__option--is-selected {
+  background: #6366f1 !important;
+}
+
+/* Dropdown indicator */
+.react-select__indicator {
+  color: #94a3b8 !important;
+}
+
+/* Remove separator */
+.react-select__indicator-separator {
+  display: none !important;
+}

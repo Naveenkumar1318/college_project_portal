@@ -1,0 +1,157 @@
+/* ================= GRID ================= */
+
+.pd-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+  width: 100%;
+}
+
+
+/* ================= CARD ================= */
+
+.mem-card {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 28px 22px;
+  border-radius: 24px;
+
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+
+  backdrop-filter: blur(20px);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+
+  text-align: center;
+  color: white;
+
+  transition: all 0.35s ease;
+}
+
+.mem-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow:
+    0 20px 50px rgba(99, 102, 241, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.08);
+}
+
+
+/* ================= AVATAR ================= */
+
+.pd-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+
+  margin-bottom: 12px;
+}
+
+
+/* ================= TEXT ================= */
+
+.pd-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.pd-name {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pd-reg {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.pd-dept {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+
+/* ================= ACTIONS ================= */
+
+.pd-actions-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+/* ================= BUTTON BASE ================= */
+
+.btn {
+  width: 100%;
+  height: 46px;
+
+  border-radius: 14px;
+  border: none;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+
+/* ================= VIEW PROFILE ================= */
+
+.btn.view {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+.btn.view:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.5);
+}
+
+
+/* ================= REMOVE ================= */
+
+.btn.remove {
+  background: linear-gradient(135deg, #ff4d4d, #ff1a1a);
+  color: white;
+}
+
+.btn.remove:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 0, 0, 0.4);
+}
+
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 768px) {
+
+  .pd-list {
+    grid-template-columns: 1fr;
+  }
+
+}

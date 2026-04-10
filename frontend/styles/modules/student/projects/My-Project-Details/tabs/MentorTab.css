@@ -1,0 +1,106 @@
+/* GRID */
+.mentor-grid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:30px;
+  padding-top:20px;
+}
+
+/* CARD */
+.mentor-card{
+  width:260px;
+
+  background:rgba(20,30,60,0.75);
+  backdrop-filter:blur(10px);
+
+  border-radius:18px;
+  padding:22px;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+
+  text-align:center;
+
+  border:1px solid rgba(255,255,255,0.08);
+  transition:.25s;
+}
+
+.mentor-card:hover{
+  transform:translateY(-5px);
+  box-shadow:0 12px 25px rgba(0,0,0,.4);
+}
+
+/* AVATAR */
+.mentor-avatar{
+  width:65px;
+  height:65px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+/* TEXT */
+.mentor-name{
+  font-size:16px;
+  font-weight:600;
+}
+
+.mentor-id{
+  font-size:13px;
+  opacity:.75;
+}
+
+.mentor-dept{
+  font-size:13px;
+  opacity:.6;
+  margin-bottom:5px;
+}
+
+/* BUTTON AREA */
+.mentor-actions{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:5px;
+}
+
+/* BUTTONS */
+.mentor-view-btn,
+.mentor-request-btn,
+.mentor-cancel-btn,
+.mentor-accepted-btn{
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  border:none;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.mentor-view-btn{
+  background:linear-gradient(90deg,#6a5cff,#7d47ff);
+  color:white;
+}
+
+.mentor-request-btn{
+  background:#1db954;
+  color:white;
+}
+
+.mentor-cancel-btn{
+  background:#ff7a18;
+  color:white;
+}
+
+.mentor-accepted-btn{
+  background:gray;
+  color:white;
+}
+
+/* LOADING */
+.mentor-loading{
+  text-align:center;
+  padding:30px;
+}
