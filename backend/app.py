@@ -319,6 +319,38 @@ class ProjectMentor(Base):
 
     project = relationship("Project")
 
+class ProjectCompletionRequest(Base):
+    __tablename__ = "project_completion_requests"
+
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    owner_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
+
+    status = Column(
+        Enum("pending", "accepted", "rejected"),
+        default="pending"
+    )
+
+    created_at = Column(DateTime, default=datetime.utcnow)   
+
+class TaskMessage(Base):
+    __tablename__ = "task_messages"
+
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE")
+    )
+
+    sender_id = Column(String(50))
+    sender_role = Column(String(20))
+
+    message = Column(Text)
+
+    created_at = Column(DateTime, default=datetime.utcnow)     
+
 # =========================
 # UTILITY FUNCTIONS
 # =========================
@@ -1714,7 +1746,127 @@ def delete_project(
 
     return {"message": "Project deleted"}
 
+#========================= Request Project Completion (owner only) =================
+@app.post("/api/projects/{project_id}/complete-request")
+def request_project_completion(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    if project.created_by != current_user.user_id:
+        raise HTTPException(403, "Only project owner can request completion")
+
+    if project.status != "active":
+        raise HTTPException(400, "Project must be active")
+
+    existing = db.query(ProjectCompletionRequest).filter(
+        ProjectCompletionRequest.project_id == project_id
+    ).first()
+
+    if existing and existing.status == "pending":
+        raise HTTPException(400, "Completion request already pending")
+
+    req = ProjectCompletionRequest(
+        project_id=project_id,
+        owner_id=current_user.user_id
+    )
+
+    db.add(req)
+    db.commit()
+
+    return {"message": "Completion request sent to admin"}
+
+
+@app.get("/api/projects/{project_id}/completion-status")
+def get_completion_status(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    req = db.query(ProjectCompletionRequest).filter(
+        ProjectCompletionRequest.project_id == project_id
+    ).order_by(ProjectCompletionRequest.id.desc()).first()
+
+    if not req:
+        return {"status": None}
+
+    return {"status": req.status}
+
+@app.get("/api/projects/{project_id}/messages")
+def get_messages(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    project = db.query(Project).filter(
+        Project.id == project_id
+    ).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    # ROLE FILTER
+    if current_user.role == "student":
+        allowed_roles = ["student", "mentor"]
+
+    elif current_user.role == "mentor":
+        allowed_roles = ["student", "mentor", "admin"]
+
+    else:
+        allowed_roles = ["mentor", "admin"]
+
+    rows = db.query(TaskMessage).filter(
+        TaskMessage.project_id == project_id,
+        TaskMessage.sender_role.in_(allowed_roles)
+    ).order_by(TaskMessage.created_at.asc()).all()
+
+    result = []
+
+    for r in rows:
+        result.append({
+            "id": r.id,
+            "sender": r.sender_id,
+            "role": r.sender_role,
+            "message": r.message,
+            "time": r.created_at
+        })
+
+    return {"data": result}
+
+@app.post("/api/projects/{project_id}/messages")
+def send_message(
+    project_id: int,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    project = db.query(Project).filter(
+        Project.id == project_id
+    ).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    msg = TaskMessage(
+        project_id=project_id,
+        sender_id=current_user.user_id,
+        sender_role=current_user.role,
+        message=data.get("message")
+    )
+
+    db.add(msg)
+    db.commit()
+
+    return {"message": "Message sent"}
 #=========================Mentor APIs=================
 # ==============================
 # GET ALL MENTORS student side (for join requests)
@@ -2220,6 +2372,230 @@ def get_mentor_projects(
 
     return {"data": result}
 
+
+#=========================Admin APIs=================
+# ================= ADMIN GET PROJECTS =================
+# ================= ADMIN PROJECTS =================
+@app.get("/api/admin/projects")
+def get_admin_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    # optional: ensure admin role
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    projects = db.query(Project).all()
+
+    result = []
+
+    for p in projects:
+
+        profile = db.query(UserProfile).filter(
+            UserProfile.user_id == p.created_by
+        ).first()
+
+        result.append({
+            "id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "status": p.status,
+            "required_members": p.required_members,
+            "members_count": len(p.members),
+
+            "owner": {
+                "name": profile.name if profile else p.created_by,
+                "department": profile.department if profile else None,
+                "image": profile.image_url if profile else None
+            }
+        })
+
+    return {"data": result}
+
+# ================= ADMIN DASHBOARD STATS =================
+@app.get("/api/admin/dashboard/stats")
+def get_admin_dashboard_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    total_projects = db.query(Project).count()
+
+    completed_projects = db.query(Project).filter(
+        Project.status == "completed"
+    ).count()
+
+    working_projects = db.query(Project).filter(
+        Project.status == "active"
+    ).count()
+
+    return {
+        "totalProjects": total_projects,
+        "completedProjects": completed_projects,
+        "workingProjects": working_projects
+    }
+
+# ================= ADMIN PROJECT DETAILS =================
+@app.get("/api/admin/projects/{project_id}")
+def get_admin_project_details(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    # optional security
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # ===== OWNER PROFILE =====
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == project.created_by
+    ).first()
+
+    # ===== MEMBERS =====
+    members = []
+
+    rows = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id
+    ).all()
+
+    for m in rows:
+
+        p = db.query(UserProfile).filter(
+            UserProfile.user_id == m.user_id
+        ).first()
+
+        members.append({
+            "user_id": m.user_id,
+            "name": p.name if p else m.user_id,
+            "department": p.department if p else None,
+            "image": p.image_url if p else None,
+            "role": m.role
+        })
+
+    # ===== MENTOR =====
+    mentor_row = db.query(ProjectMentor).filter(
+        ProjectMentor.project_id == project_id
+    ).first()
+
+    mentor = None
+
+    if mentor_row:
+        mp = db.query(UserProfile).filter(
+            UserProfile.user_id == mentor_row.mentor_id
+        ).first()
+
+        mentor = {
+            "user_id": mentor_row.mentor_id,
+            "name": mp.name if mp else mentor_row.mentor_id,
+            "department": mp.department if mp else None,
+            "image": mp.image_url if mp else None
+        }
+
+    return {
+        "project": {
+            "id": project.id,
+            "title": project.title,
+            "description": project.description,
+            "status": project.status
+        },
+        "members": members,
+        "mentor": mentor
+    }
+
+
+
+@app.get("/api/admin/completion-requests")
+def get_completion_requests(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    if current_user.role != "admin":
+        raise HTTPException(403, "Admin only")
+
+    rows = db.query(ProjectCompletionRequest).filter(
+        ProjectCompletionRequest.status == "pending"
+    ).all()
+
+    result = []
+
+    for r in rows:
+        project = db.query(Project).filter(
+            Project.id == r.project_id
+        ).first()
+
+        result.append({
+            "id": r.id,
+            "project_id": r.project_id,
+            "title": project.title if project else None,
+            "status": r.status
+        })
+
+    return {"data": result}
+
+@app.put("/api/admin/completion-requests/{request_id}/accept")
+def accept_completion(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    if current_user.role != "admin":
+        raise HTTPException(403, "Admin only")
+
+    req = db.query(ProjectCompletionRequest).filter(
+        ProjectCompletionRequest.id == request_id
+    ).first()
+
+    if not req:
+        raise HTTPException(404, "Request not found")
+
+    req.status = "accepted"
+
+    project = db.query(Project).filter(
+        Project.id == req.project_id
+    ).first()
+
+    if project:
+        project.status = "completed"
+
+    db.commit()
+
+    return {"message": "Project marked as completed"}
+
+
+@app.put("/api/admin/completion-requests/{request_id}/reject")
+def reject_completion(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    if current_user.role != "admin":
+        raise HTTPException(403, "Admin only")
+
+    req = db.query(ProjectCompletionRequest).filter(
+        ProjectCompletionRequest.id == request_id
+    ).first()
+
+    if not req:
+        raise HTTPException(404, "Request not found")
+
+    req.status = "rejected"
+
+    db.commit()
+
+    return {"message": "Completion request rejected"}
 #========================= Health Check =================
 @app.get("/health")
 def health_check():

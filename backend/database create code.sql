@@ -146,3 +146,32 @@ CREATE TABLE project_mentors (
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (mentor_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
+
+
+INSERT INTO users (user_id, email, password, role)
+VALUES (
+"Aceadmin",
+"admin@portal.com",
+"$2b$12$5Fz9j3R6fYz1gqk9i5jX3uM6Eo7Qx8p5vKx2P6s9l3H7nV2Qb8c6G",
+"admin"
+);
+
+CREATE TABLE project_completion_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT,
+    owner_id VARCHAR(50),
+    status ENUM('pending','accepted','rejected') DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE TABLE task_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    project_id INT NOT NULL,
+    sender_id VARCHAR(50) NOT NULL,
+    sender_role VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
