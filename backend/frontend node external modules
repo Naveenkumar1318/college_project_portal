@@ -5,3 +5,4 @@ npm install axios
 npm install react-icons
 npm install react-hot-toast
 npm install react-easy-crop
+npm install react-select

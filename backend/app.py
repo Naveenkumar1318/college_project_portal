@@ -11,7 +11,7 @@ from unittest import result
 from dotenv import load_dotenv
 from fastapi import Response 
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, Response, Cookie
+from fastapi import FastAPI, Depends, HTTPException,Request, File, UploadFile, Form, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +24,8 @@ from pathlib import Path
 from sqlalchemy import inspect
 import random
 from sqlalchemy import JSON
+from sqlalchemy import func
+import json
 
 from pathlib import Path
 from pydantic import BaseModel
@@ -67,6 +69,38 @@ SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ALLOWED_DEPARTMENTS
+
+ALLOWED_DEPARTMENTS = [
+    "AERO",
+    "BME",
+    "CIVIL",
+    "ARCH",
+    "CSE",
+    "CSE-CS",
+    "CSE-AIML",
+    "ECE",
+    "EEE",
+    "MECH",
+    "BT",
+    "CHEM",
+    "IT",
+    "AI-DS",
+    "CSBS",
+    "ME-COMM",
+    "ME-CSE",
+    "ME-DESIGN",
+    "ME-POWER",
+    "ME-STRUCT",
+    "MBA",
+    "MBA-LOG",
+    "MCA",
+    "PHD-CSE",
+    "PHD-ECE",
+    "PHD-MECH",
+    "PHD-CHEM"
+]
 
 # =========================
 # MODELS
@@ -113,6 +147,7 @@ class UserProfile(Base):
     dob = Column(String(20))
     gender = Column(String(10))
     bio = Column(Text)
+    skills = Column(Text)  # ADD THIS
     degree = Column(String(50))
     department = Column(String(100))
     year = Column(String(10))
@@ -153,7 +188,7 @@ class Project(Base):
     required_members = Column(Integer, default=1)
     expected_completion = Column(String(20))
 
-    status = Column(Enum("pending", "active", "completed", "archived"), default="pending")
+    status = Column(Enum("pending", "active", "closed", "completed", "archived"), default="pending")
     created_by = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -187,6 +222,7 @@ class ProjectMember(Base):
 class LoginRequest(BaseModel):
     id: str
     password: str
+    role: str
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -200,6 +236,7 @@ class ProfileResponse(BaseModel):
     dob: Optional[str] = None
     gender: Optional[str] = None
     bio: Optional[str] = None
+    skills: Optional[str] = None
     degree: Optional[str] = None
     department: Optional[str] = None
     year: Optional[str] = None
@@ -225,13 +262,62 @@ class JoinRequest(Base):
     __tablename__ = "join_requests"
 
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
-    user_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
 
-    status = Column(Enum("pending", "accepted", "rejected", "cancelled"), default="pending")
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+
+    user_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
+    # user_id = receiver (mentor or project owner)
+
+    requester_id = Column(String(50))  
+    # 🔴 who sent the request (student)
+
+    status = Column(
+        Enum("pending", "accepted", "rejected", "cancelled"),
+        default="pending"
+    )
+
     reason = Column(String(255), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+# =========================
+# Mentor Requests
+# =========================
+class MentorRequest(Base):
+    __tablename__ = "mentor_requests"
+
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    owner_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
+    mentor_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
+
+    message = Column(Text, nullable=True)
+
+    status = Column(
+        Enum("pending", "accepted", "rejected"),
+        default="pending"
+    )
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project")
+
+
+# =========================
+# Project Mentors
+# =========================
+class ProjectMentor(Base):
+    __tablename__ = "project_mentors"
+
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    mentor_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
+
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project")
 
 # =========================
 # UTILITY FUNCTIONS
@@ -361,7 +447,7 @@ app = FastAPI(title="Project Collaboration Portal API", version="1.0")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # In production, restrict to frontend URL
+    allow_origins=["*"],  # 🔥 allow all (for dev/ngrok)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -375,15 +461,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 # =========================
 @app.on_event("startup")
 def startup_event():
-    if ENVIRONMENT == "development":
-        logger.info("Running in DEVELOPMENT mode")
-
-        try:
-            logger.info("🔧 Creating tables...")
-            Base.metadata.create_all(bind=engine)
-            logger.info("✅ Tables created successfully")
-        except Exception as e:
-            logger.error(f"❌ Table creation failed: {e}")
+    logger.info("🚀 App started (manual DB mode)")
 
 # =========================
 # ENDPOINTS
@@ -394,44 +472,77 @@ def startup_event():
 @app.post("/api/auth/register")
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
+    # normalize input
+    user_id = data.id.strip()
+    email = data.email.strip().lower()
+    role = data.role.strip().lower()
+
     # validate password
     validate_password(data.password)
 
-    # check existing user
-    existing_user = db.query(User).filter(User.user_id == data.id).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User ID already exists")
+    # 🔒 allow only student and mentor
+    allowed_roles = ["student", "mentor"]
 
-    existing_email = db.query(User).filter(User.email == data.email).first()
+    if role not in allowed_roles:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid role. Allowed roles: student, mentor"
+        )
+
+    # check existing user_id
+    existing_user = db.query(User).filter(User.user_id == user_id).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="User ID already exists"
+        )
+
+    # check existing email
+    existing_email = db.query(User).filter(User.email == email).first()
     if existing_email:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
 
     # create user
     new_user = User(
-        user_id=data.id,
-        email=data.email,
+        user_id=user_id,
+        email=email,
         password=hash_password(data.password),
-        role=data.role
+        role=role
     )
 
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)  # ✅ good practice
+    db.refresh(new_user)
 
-    return {"message": "User registered successfully"}
-
+    return {
+        "message": f"{role} registered successfully"
+    }
 
 # ================= LOGIN =================
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
 
-    user = db.query(User).filter(User.user_id == data.id).first()
+    user_id = data.id.strip()
+
+    user = db.query(User).filter(
+        User.user_id == user_id,
+        User.role == data.role
+    ).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=403,
+            detail=f"This account is not registered as {data.role}"
+        )
 
     if not verify_password(data.password, user.password):
-        raise HTTPException(status_code=401, detail="Wrong password")
+        raise HTTPException(
+            status_code=401,
+            detail="Wrong password"
+        )
 
     # create tokens
     access_token = create_access_token({
@@ -452,17 +563,17 @@ def login(data: LoginRequest, response: Response, db: Session = Depends(get_db))
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True if ENVIRONMENT == "production" else False,
+        secure=False,   # change to True in production
         samesite="lax",
-        max_age=7 * 24 * 60 * 60,
+        max_age=7 * 24 * 60 * 60
     )
 
     return {
         "access_token": access_token,
         "role": user.role
-    }
+    }    
 
-# 🔴 4. Add Refresh Endpoint
+# ================= REFRESH TOKEN =================
 @app.post("/api/auth/refresh")
 def refresh_token(
     response: Response,
@@ -493,9 +604,10 @@ def refresh_token(
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
-        secure=True if ENVIRONMENT == "production" else False,
+        secure=False,
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
+
     )
 
     # new access token
@@ -506,7 +618,7 @@ def refresh_token(
 
     return {"access_token": new_access_token}
 
-# 🔴 5. Add Logout API
+# ================= LOGOUT =================
 @app.post("/api/auth/logout")
 def logout(
     response: Response,
@@ -519,14 +631,92 @@ def logout(
     response.delete_cookie("refresh_token")
     return {"message": "Logged out successfully"}
 
+# ================= GET CURRENT USER =================
 @app.get("/api/auth/me")
 def get_me(current_user: User = Depends(get_current_user)):
     return {
         "user_id": current_user.user_id,
         "role": current_user.role
     }
+# ================= Send OTP Email =================
+@app.post("/api/auth/send-otp")
+def send_email_otp(data: EmailOTPRequest):
+    email = data.email.strip().lower()
+
+    otp = generate_otp()
+
+    otp_store[email] = {
+        "otp": otp,
+        "expires": datetime.utcnow() + timedelta(minutes=5)
+    }
+
+    print(f"📧 EMAIL OTP for {email}: {otp}")
+
+    return {"message": "OTP sent"}
+
+# ================= Verify OTP Email =================
+@app.post("/api/auth/verify-email-otp")
+def verify_email_otp(data: VerifyEmailOTPRequest):
+    email = data.email.strip().lower()
+    otp = data.otp.strip()
+
+    print("VERIFY EMAIL:", email)
+    print("OTP STORE:", otp_store)
+
+    record = otp_store.get(email)
+
+    if not record:
+        raise HTTPException(400, "OTP not found")
+
+    if record["otp"] != otp:
+        raise HTTPException(400, "Invalid OTP")
+
+    if datetime.utcnow() > record["expires"]:
+        raise HTTPException(400, "OTP expired")
+
+    return {"message": "Email verified"}
+
+# ================= Send OTP Mobile =================
+@app.post("/api/auth/send-mobile-otp")
+def send_mobile_otp(data: MobileOTPRequest):
+    mobile = data.mobile.strip()
+
+    otp = generate_otp()
+
+    otp_store[mobile] = {
+        "otp": otp,
+        "expires": datetime.utcnow() + timedelta(minutes=5)
+    }
+
+    print(f"📱 MOBILE OTP for {mobile}: {otp}")
+
+    return {"message": "OTP sent"}
+
+# ================= Verify OTP Mobile =================
+@app.post("/api/auth/verify-mobile-otp")
+def verify_mobile_otp(data: VerifyMobileOTPRequest):
+    mobile = data.mobile.strip()
+    otp = data.otp.strip()
+
+    print("VERIFY MOBILE:", mobile)
+    print("OTP STORE:", otp_store)
+
+    record = otp_store.get(mobile)
+
+    if not record:
+        raise HTTPException(400, "OTP not found")
+
+    if record["otp"] != otp:
+        raise HTTPException(400, "Invalid OTP")
+
+    if datetime.utcnow() > record["expires"]:
+        raise HTTPException(400, "OTP expired")
+
+    return {"message": "Mobile verified"}
+
 
 # --- Profile ---
+# ================= Get Profile =================
 @app.get("/api/profile", response_model=ProfileResponse)
 def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.user_id).first()
@@ -545,6 +735,7 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
         dob=profile.dob,
         gender=profile.gender,
         bio=profile.bio,
+        skills=profile.skills,
         degree=profile.degree,
         department=profile.department,
         year=profile.year,
@@ -556,6 +747,98 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
         resume=profile.resume_url,
     )
 
+# ================= Get Project Stats =================
+@app.get("/api/profile/stats", response_model=ProjectStats)
+def get_project_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    my_projects = db.query(Project).filter(Project.created_by == current_user.user_id).all()
+    my_projects_count = len(my_projects)
+    my_completed = sum(1 for p in my_projects if p.status == "completed")
+
+    member_projects = db.query(ProjectMember).filter(
+        ProjectMember.user_id == current_user.user_id,
+        ProjectMember.role == "member"
+    ).all()
+    member_projects_count = len(member_projects)
+    member_completed = sum(1 for pm in member_projects if pm.project.status == "completed")
+
+    return ProjectStats(
+        myProjects=my_projects_count,
+        myCompleted=my_completed,
+        memberProjects=member_projects_count,
+        memberCompleted=member_completed
+    )
+
+# ================= Get Profile by ID =================
+@app.get("/api/profile/{user_id}")
+def get_profile_by_id(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == user_id
+    ).first()
+
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return {
+        "name": profile.name,
+        "registerNo": profile.register_no,
+        "email": profile.email,
+        "mobile": profile.mobile,
+        "dob": profile.dob,
+        "gender": profile.gender,
+        "bio": profile.bio,
+        "skills": profile.skills,
+        "degree": profile.degree,
+        "department": profile.department,
+        "year": profile.year,
+        "batch": profile.batch,
+        "github": profile.github,
+        "linkedin": profile.linkedin,
+        "whatsapp": profile.whatsapp,
+        "image": profile.image_url,
+        "resume": profile.resume_url,
+    }
+
+# ================= Get Project Stats by ID =================
+@app.get("/api/profile/{user_id}/stats")
+def get_user_project_stats(
+    user_id: str,
+    db: Session = Depends(get_db)
+):
+    # OWNED PROJECTS
+    my_projects = db.query(Project).filter(
+        Project.created_by == user_id
+    ).all()
+
+    my_projects_count = len(my_projects)
+    my_completed = sum(1 for p in my_projects if p.status == "completed")
+
+    # MEMBER PROJECTS
+    member_projects = db.query(ProjectMember).filter(
+        ProjectMember.user_id == user_id,
+        ProjectMember.role == "member"
+    ).all()
+
+    member_projects_count = len(member_projects)
+    member_completed = sum(
+        1 for pm in member_projects if pm.project.status == "completed"
+    )
+
+    return {
+        "myProjects": my_projects_count,
+        "myCompleted": my_completed,
+        "memberProjects": member_projects_count,
+        "memberCompleted": member_completed
+    }
+
+# ================= Update Profile =================
 @app.put("/api/profile")
 async def update_profile(
     current_user: User = Depends(get_current_user),
@@ -567,6 +850,7 @@ async def update_profile(
     dob: Optional[str] = Form(None),
     gender: Optional[str] = Form(None),
     bio: Optional[str] = Form(None),
+    skills: Optional[str] = Form(None),
     degree: Optional[str] = Form(None),
     department: Optional[str] = Form(None),
     year: Optional[str] = Form(None),
@@ -594,6 +878,7 @@ async def update_profile(
     if dob is not None: profile.dob = dob
     if gender is not None: profile.gender = gender
     if bio is not None: profile.bio = bio
+    if skills is not None: profile.skills = skills
     if degree is not None: profile.degree = degree
     if department is not None: profile.department = department
     if year is not None: profile.year = year
@@ -634,79 +919,7 @@ async def update_profile(
 
     return {"message": "Profile updated successfully"}
 
-@app.post("/api/auth/send-otp")
-def send_email_otp(data: EmailOTPRequest):
-    email = data.email.strip().lower()
-
-    otp = generate_otp()
-
-    otp_store[email] = {
-        "otp": otp,
-        "expires": datetime.utcnow() + timedelta(minutes=5)
-    }
-
-    print(f"📧 EMAIL OTP for {email}: {otp}")
-
-    return {"message": "OTP sent"}
-
-@app.post("/api/auth/verify-email-otp")
-def verify_email_otp(data: VerifyEmailOTPRequest):
-    email = data.email.strip().lower()
-    otp = data.otp.strip()
-
-    print("VERIFY EMAIL:", email)
-    print("OTP STORE:", otp_store)
-
-    record = otp_store.get(email)
-
-    if not record:
-        raise HTTPException(400, "OTP not found")
-
-    if record["otp"] != otp:
-        raise HTTPException(400, "Invalid OTP")
-
-    if datetime.utcnow() > record["expires"]:
-        raise HTTPException(400, "OTP expired")
-
-    return {"message": "Email verified"}
-
-@app.post("/api/auth/send-mobile-otp")
-def send_mobile_otp(data: MobileOTPRequest):
-    mobile = data.mobile.strip()
-
-    otp = generate_otp()
-
-    otp_store[mobile] = {
-        "otp": otp,
-        "expires": datetime.utcnow() + timedelta(minutes=5)
-    }
-
-    print(f"📱 MOBILE OTP for {mobile}: {otp}")
-
-    return {"message": "OTP sent"}
-
-
-@app.post("/api/auth/verify-mobile-otp")
-def verify_mobile_otp(data: VerifyMobileOTPRequest):
-    mobile = data.mobile.strip()
-    otp = data.otp.strip()
-
-    print("VERIFY MOBILE:", mobile)
-    print("OTP STORE:", otp_store)
-
-    record = otp_store.get(mobile)
-
-    if not record:
-        raise HTTPException(400, "OTP not found")
-
-    if record["otp"] != otp:
-        raise HTTPException(400, "Invalid OTP")
-
-    if datetime.utcnow() > record["expires"]:
-        raise HTTPException(400, "OTP expired")
-
-    return {"message": "Mobile verified"}
-
+# ================= Change Password =================
 @app.put("/api/profile/change-password")
 def change_password(
     data: PasswordChange,
@@ -719,31 +932,7 @@ def change_password(
     db.commit()
     return {"message": "Password updated successfully"}
 
-# --- Project Stats ---
-@app.get("/api/profile/stats", response_model=ProjectStats)
-def get_project_stats(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    my_projects = db.query(Project).filter(Project.created_by == current_user.user_id).all()
-    my_projects_count = len(my_projects)
-    my_completed = sum(1 for p in my_projects if p.status == "completed")
-
-    member_projects = db.query(ProjectMember).filter(
-        ProjectMember.user_id == current_user.user_id,
-        ProjectMember.role == "member"
-    ).all()
-    member_projects_count = len(member_projects)
-    member_completed = sum(1 for pm in member_projects if pm.project.status == "completed")
-
-    return ProjectStats(
-        myProjects=my_projects_count,
-        myCompleted=my_completed,
-        memberProjects=member_projects_count,
-        memberCompleted=member_completed
-    )
-
-# --- Dashboard Stats (optional) ---
+# --- Dashboard Stats (Home) ---
 @app.get("/api/dashboard/stats", response_model=DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
     total_projects = db.query(Project).count()
@@ -754,8 +943,8 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         mentors=total_mentors,
         students=total_students
     )
+# --- Projects APIs student ---
 
-# ---create project---
 # ================= CREATE PROJECT =================
 @app.post("/api/projects")
 def create_project(
@@ -763,13 +952,41 @@ def create_project(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if not data.title.strip():
+    # ================= VALIDATION =================
+
+    if not data.title or not data.title.strip():
         raise HTTPException(400, "Project title is required")
 
+    if not data.description or not data.description.strip():
+        raise HTTPException(400, "Project description is required")
+
+    if data.required_members is None or data.required_members <= 0:
+        raise HTTPException(400, "Required members must be greater than 0")
+
+    # ================= DEPARTMENT VALIDATION =================
+    departments = data.departments or []
+
+    # remove duplicates
+    departments = list(set(departments))
+
+    # convert ALL → empty
+    if "ALL" in departments:
+        departments = []
+
+    # validate codes
+    invalid = [d for d in departments if d not in ALLOWED_DEPARTMENTS]
+
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid departments: {invalid}"
+        )
+
+    # ================= CREATE PROJECT =================
     project = Project(
-        title=data.title,
-        description=data.description,
-        departments=data.departments,
+        title=data.title.strip(),
+        description=data.description.strip(),
+        departments=departments,
         required_members=data.required_members,
         expected_completion=data.expected_completion,
         created_by=current_user.user_id,
@@ -780,14 +997,14 @@ def create_project(
     db.commit()
     db.refresh(project)
 
-    # add owner
-    member = ProjectMember(
+    # ================= ADD OWNER =================
+    owner_member = ProjectMember(
         project_id=project.id,
         user_id=current_user.user_id,
         role="owner"
     )
 
-    db.add(member)
+    db.add(owner_member)
     db.commit()
 
     return {
@@ -795,7 +1012,74 @@ def create_project(
         "project_id": project.id
     }
 
-# --- Search Projects ---
+
+# ================= UPDATE PROJECT =================
+@app.put("/api/projects/{project_id}")
+def update_project(
+    project_id: int,
+    data: CreateProjectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    if project.created_by != current_user.user_id:
+        raise HTTPException(403, "Not authorized")
+
+    # ================= VALIDATION =================
+
+    if not data.title or not data.title.strip():
+        raise HTTPException(400, "Project title is required")
+
+    if not data.description or not data.description.strip():
+        raise HTTPException(400, "Project description is required")
+
+    if data.required_members is None or data.required_members <= 0:
+        raise HTTPException(400, "Required members must be greater than 0")
+
+    # ================= MEMBER SAFETY =================
+    members_count = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id
+    ).count()
+
+    if data.required_members < members_count:
+        raise HTTPException(
+            400,
+            "Cannot reduce below current members"
+        )
+
+    # ================= DEPARTMENT VALIDATION =================
+    departments = data.departments or []
+
+    departments = list(set(departments))
+
+    if "ALL" in departments:
+        departments = []
+
+    invalid = [d for d in departments if d not in ALLOWED_DEPARTMENTS]
+
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid departments: {invalid}"
+        )
+
+    # ================= UPDATE =================
+    project.title = data.title.strip()
+    project.description = data.description.strip()
+    project.departments = departments
+    project.required_members = data.required_members
+    project.expected_completion = data.expected_completion
+
+    db.commit()
+    db.refresh(project)
+
+    return {"message": "Project updated successfully"}
+
+#================== SEARCH & FILTER PROJECTS =================
 @app.get("/api/projects/search")
 def search_projects(
     q: str = "",
@@ -809,23 +1093,34 @@ def search_projects(
     try:
         query = db.query(Project)
 
-        # 🔍 SEARCH
+        # ================= SEARCH =================
         if q:
             query = query.filter(Project.title.ilike(f"%{q}%"))
 
-        # 🔥 STATUS FILTER
+        # ================= STATUS FILTER =================
         if status == "open":
             query = query.filter(Project.status == "active")
-        else:
-            query = query.filter(Project.status != "active")
 
-        # 🔥 DEPARTMENT FILTER
-        if department and department != "All":
-            query = query.filter(Project.departments.contains([department]))
+        elif status == "closed":
+            query = query.filter(Project.status == "closed")
 
+        elif status == "completed":
+            query = query.filter(Project.status == "completed")
+
+        elif status == "all":
+            query = query.filter(Project.status.in_(["active", "closed"]))
+
+        # ================= DEPARTMENT FILTER =================
+        if department:
+            query = query.filter(
+                (func.JSON_LENGTH(Project.departments) == 0) |
+                Project.dept_text.like(f"%{department}%")
+            )
+
+        # ================= FETCH =================
         projects = (
             query
-            .order_by(Project.id.desc())  # 🔥 NEW FIRST
+            .order_by(Project.id.desc())
             .offset((page - 1) * limit)
             .limit(limit)
             .all()
@@ -835,12 +1130,12 @@ def search_projects(
 
         for p in projects:
 
-            # 🔥 GET OWNER PROFILE
+            # OWNER PROFILE
             profile = db.query(UserProfile).filter(
                 UserProfile.user_id == p.created_by
             ).first()
 
-            # 🔥 GET JOIN STATUS
+            # JOIN REQUEST
             join_req = db.query(JoinRequest).filter_by(
                 project_id=p.id,
                 user_id=current_user.user_id
@@ -853,25 +1148,22 @@ def search_projects(
                 "id": p.id,
                 "title": p.title,
                 "description": p.description,
-                "departments": p.departments,
+                "departments": p.departments or [],
                 "required_members": p.required_members,
                 "members_count": len(p.members),
                 "expected_completion": p.expected_completion,
                 "status": p.status,
 
-                # ✅ FULL OWNER DATA
                 "owner": {
-                    "name": profile.name if profile else p.owner.user_id,
+                    "name": profile.name if profile else p.created_by,
                     "department": profile.department if profile else None,
                     "reg_no": profile.register_no if profile else None,
                     "image": profile.image_url if profile else None
                 },
 
-                # ✅ JOIN STATUS
                 "join_status": join_status,
                 "reason": reason,
 
-                # ✅ OWNER CHECK
                 "is_owner": p.created_by == current_user.user_id
             })
 
@@ -884,8 +1176,51 @@ def search_projects(
     except Exception as e:
         print("SEARCH ERROR:", str(e))
         raise HTTPException(status_code=500, detail=str(e))
-           
-# --- Join Project ---
+    
+#================== GET MEMBER PROJECTS =================
+@app.get("/api/projects/member")
+def get_member_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    memberships = db.query(ProjectMember).filter(
+        ProjectMember.user_id == current_user.user_id,
+        ProjectMember.role == "member"
+    ).all()
+
+    result = []
+
+    for m in memberships:
+
+        p = m.project
+
+        profile = db.query(UserProfile).filter(
+            UserProfile.user_id == p.created_by
+        ).first()
+
+        result.append({
+            "id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "departments": p.departments or [],
+            "required_members": p.required_members,
+            "members_count": len(p.members),
+            "expected_completion": p.expected_completion,
+            "status": p.status,
+
+            "owner": {
+                "name": profile.name if profile else p.created_by,
+                "department": profile.department if profile else None,
+                "reg_no": profile.register_no if profile else None,
+                "image": profile.image_url if profile else None
+            }
+        })
+
+    return {"data": result}
+
+#---Join / Leave APIs---  
+#========================= Join Project  =================
 @app.post("/api/projects/{project_id}/join")
 def join_project(
     project_id: int,
@@ -910,6 +1245,30 @@ def join_project(
     # =========================
     if project.status != "active":
         raise HTTPException(status_code=400, detail="Project is not open for joining")
+    
+    # =========================
+    # 🔥 3.5 DEPARTMENT VALIDATION
+    # =========================
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == current_user.user_id
+    ).first()
+
+    user_dept = profile.department if profile else None
+
+    # ✅ NEW FIX
+    if not user_dept:
+        raise HTTPException(
+            status_code=400,
+            detail="Please complete your profile (department missing)"
+        )
+
+    project_departments = project.departments or []
+
+    if project_departments and user_dept not in project_departments:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not eligible to apply for this project (department mismatch)"
+        )
 
     # =========================
     # 4. CHECK MEMBER COUNT (FIXED)
@@ -957,7 +1316,7 @@ def join_project(
 
     return {"message": "Request sent successfully"}
 
-#--- Cancel Join Request ---
+#========================= Cancel Join Request =================
 @app.post("/api/projects/{project_id}/cancel")
 def cancel_request(
     project_id: int,
@@ -1002,7 +1361,7 @@ def cancel_request(
 
     return {"message": "Request cancelled successfully"}
 
-#--- Leave Project ---
+#========================= Leave Project =================
 @app.post("/api/projects/{project_id}/leave")
 def leave_project(
     project_id: int,
@@ -1043,82 +1402,8 @@ def leave_project(
 
     return {"message": "Left project successfully"}
 
-#--- Get Project Details owner ---
-@app.get("/api/projects/{project_id}")
-def get_project(
-    project_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    project = db.query(Project).filter(Project.id == project_id).first()
-
-    if not project:
-        raise HTTPException(404, "Project not found")
-
-    owner = db.query(UserProfile).filter(
-        UserProfile.user_id == project.created_by
-    ).first()
-
-    members_count = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id
-    ).count()
-
-    return {
-        "id": project.id,
-        "title": project.title,
-        "description": project.description,
-        "status": project.status,
-        "required_members": project.required_members,
-        "members_count": members_count,
-        "is_owner": project.created_by == current_user.user_id,
-        "owner": {
-            "name": owner.name if owner else None,
-            "department": owner.department if owner else None
-        }
-    }
-
-#--- Update Project Status (owner only) ---
-@app.put("/api/projects/{project_id}/status")
-def update_status(
-    project_id: int,
-    status: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    project = db.query(Project).filter(Project.id == project_id).first()
-
-    if not project:
-        raise HTTPException(404, "Project not found")
-
-    if project.created_by != current_user.user_id:
-        raise HTTPException(403, "Not authorized")
-
-    project.status = status
-    db.commit()
-
-    return {"message": "Status updated"}
-
-# --- Delete Project ---
-@app.delete("/api/projects/{project_id}")
-def delete_project(
-    project_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    project = db.query(Project).filter(Project.id == project_id).first()
-
-    if not project:
-        raise HTTPException(404, "Project not found")
-
-    if project.created_by != current_user.user_id:
-        raise HTTPException(403, "Not authorized")
-
-    db.delete(project)
-    db.commit()
-
-    return {"message": "Project deleted"}
-#--- Get Join Requests (for owner) ---
-
+#---Project Requests---
+#========================= Get Join Requests =================
 @app.get("/api/projects/{project_id}/requests")
 def get_requests(
     project_id: int,
@@ -1132,10 +1417,16 @@ def get_requests(
     if project.created_by != current_user.user_id:
         raise HTTPException(403, "Not authorized")
 
-    requests = db.query(JoinRequest).filter_by(
-        project_id=project_id,
-        status="pending"
-    ).all()
+    requests = (
+        db.query(JoinRequest)
+        .join(User, User.user_id == JoinRequest.user_id)
+        .filter(
+            JoinRequest.project_id == project_id,
+            JoinRequest.status == "pending",
+            User.role == "student"
+        )
+        .all()
+    )
 
     result = []
 
@@ -1144,17 +1435,17 @@ def get_requests(
             UserProfile.user_id == r.user_id
         ).first()
 
-    result.append({
-        "user_id": r.user_id,
-        "name": profile.name if profile else r.user_id,
-        "department": profile.department if profile else None,
-        "reg_no": profile.register_no if profile else None,
-        "image": profile.image_url if profile else None   # ✅ ADD THIS LINE
-    })
+        result.append({
+            "user_id": r.user_id,
+            "name": profile.name if profile else r.user_id,
+            "department": profile.department if profile else None,
+            "reg_no": profile.register_no if profile else None,
+            "image": profile.image_url if profile else None
+        })
 
     return {"data": result}
 
-#--- Accept Join Request ---
+#========================= Accept Join Request =================
 @app.post("/api/projects/{project_id}/accept/{user_id}")
 def accept_request(
     project_id: int,
@@ -1200,7 +1491,7 @@ def accept_request(
 
     return {"message": "User accepted"}
 
-#--- Reject Join Request ---
+#========================= Reject Join Request =================
 @app.post("/api/projects/{project_id}/reject/{user_id}")
 def reject_request(
     project_id: int,
@@ -1231,10 +1522,12 @@ def reject_request(
 
     return {"message": "User rejected"}
 
-#--- Get Project Members ---
+#---Project Members---
+#========================= Get Project Members =================
 @app.get("/api/projects/{project_id}/members")
 def get_members(
     project_id: int,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     members = db.query(ProjectMember).filter(
@@ -1248,22 +1541,143 @@ def get_members(
             UserProfile.user_id == m.user_id
         ).first()
 
-    result.append({
-        "user_id": m.user_id,
-        "name": profile.name if profile else None,
-        "department": profile.department if profile else None,
-        "reg_no": profile.register_no if profile else None,
-        "image": profile.image_url if profile else None,  # ✅ ADD
-        "role": m.role                                    # ✅ ADD
-    })
+        result.append({
+            "user_id": m.user_id,
+            "name": profile.name if profile else None,
+            "department": profile.department if profile else None,
+            "reg_no": profile.register_no if profile else None,
+            "image": profile.image_url if profile else None,
+            "role": m.role
+        })
 
     return {"data": result}
 
-# --- Remove Member ---
+#========================= Remove Member (Owner Only) =================
 @app.post("/api/projects/{project_id}/remove/{user_id}")
 def remove_member(
     project_id: int,
     user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # =========================
+    # 1. CHECK PROJECT
+    # =========================
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    # =========================
+    # 2. AUTH CHECK
+    # =========================
+    if project.created_by != current_user.user_id:
+        raise HTTPException(403, "Not authorized")
+
+    # =========================
+    # 3. FIND MEMBER
+    # =========================
+    member = db.query(ProjectMember).filter_by(
+        project_id=project_id,
+        user_id=user_id
+    ).first()
+
+    if not member:
+        raise HTTPException(404, "Member not found")
+
+    # =========================
+    # 4. PREVENT OWNER REMOVE
+    # =========================
+    if member.role == "owner":
+        raise HTTPException(400, "Cannot remove owner")
+
+    # =========================
+    # 5. DELETE MEMBER
+    # =========================
+    db.delete(member)
+
+    # =========================
+    # 6. SYNC JOIN REQUEST (CRITICAL FIX)
+    # =========================
+    req = db.query(JoinRequest).filter_by(
+        project_id=project_id,
+        user_id=user_id
+    ).first()
+
+    if req:
+        req.status = "cancelled"
+        req.reason = "Removed by owner"   # ✅ optional but useful
+
+    # =========================
+    # 7. COMMIT
+    # =========================
+    db.commit()
+
+    return {
+        "message": "Member removed successfully"
+    }
+
+#---Project Details---
+#========================= Get Project Details =================
+@app.get("/api/projects/{project_id}")
+def get_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # =========================
+    # 1. GET PROJECT
+    # =========================
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    # =========================
+    # 2. OWNER PROFILE
+    # =========================
+    owner = db.query(UserProfile).filter(
+        UserProfile.user_id == project.created_by
+    ).first()
+
+    # =========================
+    # 3. MEMBERS COUNT
+    # =========================
+    members_count = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id
+    ).count()
+
+    # =========================
+    # 4. RESPONSE (FINAL)
+    # =========================
+    return {
+        "id": project.id,
+        "title": project.title,
+        "description": project.description,
+        "status": project.status,
+
+        # 🔥 CORE FIELDS (FRONTEND NEEDS)
+        "departments": project.departments or [],
+        "expected_completion": project.expected_completion or "",
+
+        # 🔥 MEMBERS
+        "required_members": project.required_members,
+        "members_count": members_count,
+
+        # 🔥 ROLE
+        "is_owner": project.created_by == current_user.user_id,
+
+        # 🔥 OWNER INFO
+        "owner": {
+            "name": owner.name if owner else project.created_by,
+            "department": owner.department if owner else None
+        }
+    }
+
+#========================= Update Project Status (owner only) =================
+@app.put("/api/projects/{project_id}/status")
+def update_status(
+    project_id: int,
+    status: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -1275,23 +1689,538 @@ def remove_member(
     if project.created_by != current_user.user_id:
         raise HTTPException(403, "Not authorized")
 
-    member = db.query(ProjectMember).filter_by(
-        project_id=project_id,
-        user_id=user_id
-    ).first()
-
-    if not member:
-        raise HTTPException(404, "Member not found")
-
-    if member.role == "owner":
-        raise HTTPException(400, "Cannot remove owner")
-
-    db.delete(member)
+    project.status = status
     db.commit()
 
-    return {"message": "Member removed"}
+    return {"message": "Status updated"}
 
-# --- Health Check ---
+#========================= Delete Project (owner only) =================
+@app.delete("/api/projects/{project_id}")
+def delete_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    if project.created_by != current_user.user_id:
+        raise HTTPException(403, "Not authorized")
+
+    db.delete(project)
+    db.commit()
+
+    return {"message": "Project deleted"}
+
+
+#=========================Mentor APIs=================
+# ==============================
+# GET ALL MENTORS student side (for join requests)
+# ==============================
+@app.get("/api/mentors")
+def get_all_mentors(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    mentors = (
+        db.query(
+            User.user_id,
+            UserProfile.name,
+            UserProfile.department,
+            UserProfile.image_url,
+            User.email
+        )
+        .join(UserProfile, UserProfile.user_id == User.user_id)
+        .filter(User.role == "mentor")
+        .all()
+    )
+
+    result = []
+
+    for m in mentors:
+
+        # 1️⃣ Check if mentor is currently assigned to project
+        assigned = db.query(ProjectMentor).filter(
+            ProjectMentor.project_id == project_id,
+            ProjectMentor.mentor_id == m.user_id
+        ).first()
+
+        # 2️⃣ Get latest mentor request
+        req = (
+            db.query(MentorRequest)
+            .filter(
+                MentorRequest.project_id == project_id,
+                MentorRequest.mentor_id == m.user_id
+            )
+            .order_by(MentorRequest.id.desc())
+            .first()
+        )
+
+        status = None
+
+        # 🔥 Accepted must ONLY come from project_mentors table
+        if assigned:
+            status = "accepted"
+
+        elif req:
+            if req.status == "pending":
+                status = "pending"
+            elif req.status == "rejected":
+                status = "rejected"
+
+        result.append({
+            "user_id": m.user_id,
+            "name": m.name,
+            "department": m.department,
+            "image": m.image_url,
+            "email": m.email,
+            "request_status": status
+        })
+
+    return {"data": result}
+
+@app.get("/api/mentor/profile")
+def get_mentor_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == current_user.user_id
+    ).first()
+
+    if not profile:
+        return {}
+
+    return {
+        "name": profile.name,
+        "staffId": profile.register_no,
+        "email": profile.email,
+        "mobile": profile.mobile,
+        "dob": profile.dob,
+        "gender": profile.gender,
+        "bio": profile.bio,
+        "skills": profile.skills,
+        "department": profile.department,
+        "designation": profile.degree,
+        "qualification": profile.year,
+        "experience": profile.batch,
+        "github": profile.github,
+        "linkedin": profile.linkedin,
+        "whatsapp": profile.whatsapp,
+        "image": profile.image_url,
+        "resume": profile.resume_url
+    }
+
+@app.get("/api/mentor/profile/stats")
+def get_mentor_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    mentoring_projects = db.query(Project).filter(
+        Project.created_by == current_user.user_id
+    ).count()
+
+    completed_projects = db.query(Project).filter(
+        Project.created_by == current_user.user_id,
+        Project.status == "completed"
+    ).count()
+
+    active_students = db.query(ProjectMember).join(Project).filter(
+        Project.created_by == current_user.user_id
+    ).count()
+
+    return {
+        "mentoringProjects": mentoring_projects,
+        "completedProjects": completed_projects,
+        "activeStudents": active_students
+    }
+
+@app.put("/api/mentor/profile")
+async def update_mentor_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    name: Optional[str] = Form(None),
+    staffId: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    mobile: Optional[str] = Form(None),
+    dob: Optional[str] = Form(None),
+    gender: Optional[str] = Form(None),
+    bio: Optional[str] = Form(None),
+    skills: Optional[str] = Form(None),
+    department: Optional[str] = Form(None),
+    designation: Optional[str] = Form(None),
+    qualification: Optional[str] = Form(None),
+    experience: Optional[str] = Form(None),
+    github: Optional[str] = Form(None),
+    linkedin: Optional[str] = Form(None),
+    whatsapp: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    resume: Optional[UploadFile] = File(None),
+):
+
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == current_user.user_id
+    ).first()
+
+    if not profile:
+        profile = UserProfile(user_id=current_user.user_id)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
+    # TEXT FIELDS
+    if name is not None:
+        profile.name = name
+
+    if staffId is not None:
+        profile.register_no = staffId
+
+    if email is not None:
+        profile.email = email
+
+    if mobile is not None:
+        profile.mobile = mobile
+
+    if dob is not None:
+        profile.dob = dob
+
+    if gender is not None:
+        profile.gender = gender
+
+    if bio is not None:
+        profile.bio = bio
+
+    if skills is not None:
+        profile.skills = skills
+
+    if department is not None:
+        profile.department = department
+
+    if designation is not None:
+        profile.degree = designation
+
+    if qualification is not None:
+        profile.year = qualification
+
+    if experience is not None:
+        profile.batch = experience
+
+    if github is not None:
+        profile.github = github
+
+    if linkedin is not None:
+        profile.linkedin = linkedin
+
+    if whatsapp is not None:
+        profile.whatsapp = whatsapp
+
+    # IMAGE UPLOAD
+    if image:
+        if profile.image_url:
+            old_path = Path(profile.image_url.lstrip("/"))
+            if old_path.exists():
+                old_path.unlink()
+
+        profile.image_url = await save_upload_file(image, "images")
+
+    # RESUME UPLOAD
+    if resume:
+        if profile.resume_url:
+            old_path = Path(profile.resume_url.lstrip("/"))
+            if old_path.exists():
+                old_path.unlink()
+
+        profile.resume_url = await save_upload_file(resume, "resumes")
+
+    db.commit()
+    db.refresh(profile)
+
+    return {"message": "Mentor profile updated successfully"}
+
+@app.put("/api/mentor/profile/change-password")
+def change_password(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    user = db.query(User).filter(User.user_id == current_user.user_id).first()
+
+    if not verify_password(data["currentPassword"], user.password):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+
+    user.password = hash_password(data["newPassword"])
+
+    db.commit()
+
+    return {"message": "Password updated"}
+
+@app.get("/api/mentor/requests")
+def get_mentor_requests(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    rows = (
+        db.query(
+            MentorRequest.id,
+            MentorRequest.project_id,
+            Project.title.label("project_title"),
+            MentorRequest.owner_id,
+            UserProfile.name.label("student_name"),
+            UserProfile.image_url.label("student_image")
+        )
+        .join(Project, Project.id == MentorRequest.project_id)
+        .join(UserProfile, UserProfile.user_id == MentorRequest.owner_id)
+        .filter(
+            MentorRequest.mentor_id == current_user.user_id,
+            MentorRequest.status == "pending"
+        )
+        .all()
+    )
+
+    result = []
+
+    for r in rows:
+        result.append({
+            "id": r.id,
+            "project_id": r.project_id,
+            "project_title": r.project_title,
+            "student_id": r.owner_id,
+            "student_name": r.student_name,
+            "student_image": r.student_image
+        })
+
+    return {"data": result}
+# ==============================
+# REQUEST MENTOR
+# ==============================
+
+@app.post("/api/mentor/request")
+def request_mentor(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    project_id = data.get("project_id")
+    mentor_id = data.get("mentor_id")
+
+    if not project_id or not mentor_id:
+        raise HTTPException(400, "Invalid request")
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    if project.created_by != current_user.user_id:
+        raise HTTPException(403, "Only project owner can request mentor")
+
+    existing = db.query(MentorRequest).filter(
+        MentorRequest.project_id == project_id,
+        MentorRequest.mentor_id == mentor_id
+    ).first()
+
+    if existing:
+
+        if existing.status == "pending":
+            raise HTTPException(400, "Mentor request already pending")
+
+        if existing.status == "accepted":
+            raise HTTPException(400, "Mentor already assigned")
+
+        if existing.status == "rejected":
+            existing.status = "pending"
+            db.commit()
+            return {"message": "Mentor request sent again"}
+
+    req = MentorRequest(
+        project_id=project_id,
+        owner_id=current_user.user_id,
+        mentor_id=mentor_id,
+        status="pending"
+    )
+
+    db.add(req)
+    db.commit()
+
+    return {"message": "Mentor request sent"}
+
+# ================= CANCEL MENTOR REQUEST =================
+@app.delete("/api/mentor/request/{project_id}/{mentor_id}")
+def cancel_mentor_request(
+    project_id: int,
+    mentor_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    req = db.query(MentorRequest).filter(
+        MentorRequest.project_id == project_id,
+        MentorRequest.mentor_id == mentor_id,
+        MentorRequest.owner_id == current_user.user_id
+    ).first()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if req.status != "pending":
+        raise HTTPException(
+            status_code=400,
+            detail="Only pending requests can be cancelled"
+        )
+
+    db.delete(req)
+    db.commit()
+
+    return {"message": "Mentor request cancelled"}
+
+@app.delete("/api/project/mentor/{project_id}/{mentor_id}")
+def remove_project_mentor(
+    project_id: int,
+    mentor_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    project = db.query(Project).filter(
+        Project.id == project_id
+    ).first()
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    # only project owner can remove mentor
+    if project.created_by != current_user.user_id:
+        raise HTTPException(403, "Not allowed")
+
+    mentor = db.query(ProjectMentor).filter(
+        ProjectMentor.project_id == project_id,
+        ProjectMentor.mentor_id == mentor_id
+    ).first()
+
+    if not mentor:
+        raise HTTPException(404, "Mentor not assigned")
+
+    # remove mentor assignment
+    db.delete(mentor)
+
+    # 🔧 reset mentor request status
+    req = db.query(MentorRequest).filter(
+        MentorRequest.project_id == project_id,
+        MentorRequest.mentor_id == mentor_id
+    ).order_by(MentorRequest.id.desc()).first()
+
+    if req:
+        req.status = "rejected"
+
+    db.commit()
+
+    return {"message": "Mentor removed"}
+
+@app.put("/api/mentor/requests/{request_id}/accept")
+def accept_mentor_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    req = db.query(MentorRequest).filter(
+        MentorRequest.id == request_id
+    ).first()
+
+    if not req:
+        raise HTTPException(404, "Request not found")
+
+    if req.status != "pending":
+        raise HTTPException(400, "Request already processed")
+
+    # update request
+    req.status = "accepted"
+
+    # ensure mentor added
+    existing = db.query(ProjectMentor).filter(
+        ProjectMentor.project_id == req.project_id,
+        ProjectMentor.mentor_id == req.mentor_id
+    ).first()
+
+    if not existing:
+        mentor = ProjectMentor(
+            project_id=req.project_id,
+            mentor_id=req.mentor_id
+        )
+        db.add(mentor)
+
+    db.commit()
+
+    return {"message": "Mentor assigned successfully"}
+
+@app.put("/api/mentor/requests/{request_id}/reject")
+def reject_mentor_request(
+    request_id: int,
+    db: Session = Depends(get_db)
+):
+
+    req = db.query(MentorRequest).filter(
+        MentorRequest.id == request_id
+    ).first()
+
+    if not req:
+        raise HTTPException(404, "Request not found")
+
+    req.status = "rejected"
+    db.commit()
+
+    return {"message": "Request rejected"}
+
+@app.get("/api/mentor/projects")
+def get_mentor_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    rows = (
+        db.query(Project)
+        .join(ProjectMentor, ProjectMentor.project_id == Project.id)
+        .filter(ProjectMentor.mentor_id == current_user.user_id)
+        .all()
+    )
+
+    result = []
+
+    for p in rows:
+
+        profile = db.query(UserProfile).filter(
+            UserProfile.user_id == p.created_by
+        ).first()
+
+        result.append({
+            "id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "departments": p.departments or [],
+            "required_members": p.required_members,
+            "members_count": len(p.members),
+            "expected_completion": p.expected_completion,
+            "status": p.status,
+
+            "owner": {
+                "name": profile.name if profile else p.created_by,
+                "department": profile.department if profile else None,
+                "image": profile.image_url if profile else None
+            }
+        })
+
+    return {"data": result}
+
+#========================= Health Check =================
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
