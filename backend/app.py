@@ -500,9 +500,32 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 def startup_event():
     logger.info("🚀 App started")
 
-    # 🔥 CREATE TABLES AUTOMATICALLY
+    # Create tables
     Base.metadata.create_all(bind=engine)
 
+    db = SessionLocal()
+
+    try:
+        # 🔍 Check if admin exists
+        admin = db.query(User).filter(User.email == "admin@portal.com").first()
+
+        if not admin:
+            admin_user = User(
+                user_id="admin001",
+                email="admin@portal.com",
+                password=hash_password("Naveen@123"),
+                role="admin"
+            )
+
+            db.add(admin_user)
+            db.commit()
+
+            logger.info("✅ Admin user created")
+        else:
+            logger.info("ℹ️ Admin already exists")
+
+    finally:
+        db.close()
 # =========================
 # ENDPOINTS
 # =========================
