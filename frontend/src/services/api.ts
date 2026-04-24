@@ -2,7 +2,7 @@ import axios from "axios";
 
 /* ================= BASE CONFIG ================= */
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "https://student-collab-backend-q6cm.onrender.com";
+  import.meta.env.VITE_API_URL || "https://student-collab-backend-q6cm.onrender.com/api";
 
 if (!import.meta.env.VITE_API_URL) {
   console.warn("⚠️ VITE_API_URL not set. Falling back to production backend.");
