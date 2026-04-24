@@ -36,10 +36,11 @@ load_dotenv()
 # =========================
 # CONFIGURATION
 # =========================
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "mysql+pymysql://root:@localhost:3306/adhiyamaan_project_collab_portal"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL is not set")
+    
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
@@ -493,7 +494,10 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 # =========================
 @app.on_event("startup")
 def startup_event():
-    logger.info("🚀 App started (manual DB mode)")
+    logger.info("🚀 App started")
+
+    # 🔥 CREATE TABLES AUTOMATICALLY
+    Base.metadata.create_all(bind=engine)
 
 # =========================
 # ENDPOINTS
