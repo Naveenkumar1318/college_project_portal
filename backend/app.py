@@ -65,7 +65,11 @@ logger = logging.getLogger(__name__)
 # =========================
 # DATABASE SETUP (SQLAlchemy)
 # =========================
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True
+)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
