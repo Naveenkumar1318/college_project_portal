@@ -26,6 +26,8 @@ import random
 from sqlalchemy import JSON
 from sqlalchemy import func
 import json
+import smtplib
+from email.mime.text import MIMEText
 
 from pathlib import Path
 from pydantic import BaseModel
@@ -701,6 +703,19 @@ def get_me(current_user: User = Depends(get_current_user)):
         "user_id": current_user.user_id,
         "role": current_user.role
     }
+
+def send_real_email(to_email: str, otp: str):
+    sender = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
+
+    msg = MIMEText(f"Your OTP is: {otp}")
+    msg["Subject"] = "OTP Verification"
+    msg["From"] = sender
+    msg["To"] = to_email
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(sender, password)
+        server.send_message(msg)
 # ================= Send OTP Email =================
 @app.post("/api/auth/send-otp")
 def send_email_otp(data: EmailOTPRequest):
@@ -713,7 +728,7 @@ def send_email_otp(data: EmailOTPRequest):
         "expires": datetime.utcnow() + timedelta(minutes=5)
     }
 
-    print(f"📧 EMAIL OTP for {email}: {otp}")
+    send_real_email(email, otp)
 
     return {"message": "OTP sent"}
 
