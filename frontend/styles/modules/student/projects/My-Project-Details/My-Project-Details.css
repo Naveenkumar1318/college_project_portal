@@ -1,0 +1,253 @@
+/* ================= PAGE CONTAINER ================= */
+
+.pd-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 30px 60px;
+  color: white;
+}
+
+/* ================= BACK BUTTON ================= */
+
+.pd-back-btn {
+  align-self: flex-start;
+  margin-bottom: 20px;
+
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 14px;
+
+  transition: 0.3s;
+}
+
+.pd-back-btn:hover {
+  color: white;
+}
+
+/* ================= PROJECT CARD ================= */
+
+.pd-glass {
+  width: 100%;
+  padding: 30px;
+  border-radius: 22px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.08),
+    rgba(255,255,255,0.02)
+  );
+
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.12);
+
+  transition: 0.3s;
+}
+
+.pd-glass:hover {
+  box-shadow:
+    0 0 25px rgba(99,102,241,0.35),
+    0 0 40px rgba(139,92,246,0.25);
+}
+
+/* ================= TOP HEADER ================= */
+
+.pd-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pd-top h2 {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* ================= STATUS BADGE ================= */
+
+.pd-status {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pd-status.active {
+  background: #22c55e;
+}
+
+.pd-status.closed {
+  background: #ef4444;
+}
+
+/* ================= DESCRIPTION ================= */
+
+.pd-desc {
+  margin-top: 10px;
+  margin-bottom: 18px;
+  color: #cbd5e1;
+  font-size: 15px;
+}
+
+/* ================= DETAILS ================= */
+
+.pd-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.pd-details p {
+  margin: 0;
+}
+
+/* ================= ACTIONS ================= */
+
+.pd-actions {
+  display: flex;
+  flex-direction: column;   /* important change */
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+/* ================= TOGGLE ================= */
+
+.pd-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  padding: 5px;
+  gap: 5px;
+}
+
+.pd-toggle span {
+  padding: 8px 18px;
+  border-radius: 999px;
+
+  font-size: 14px;
+  cursor: pointer;
+
+  color: #cbd5e1;
+  transition: 0.3s;
+}
+
+.pd-toggle span.active {
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  color: white;
+  font-weight: 600;
+
+  box-shadow: 0 0 12px rgba(139,92,246,0.6);
+}
+
+/* ================= BUTTON GROUP ================= */
+
+.pd-btn-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ================= BUTTONS ================= */
+
+.pd-actions button {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  color: white;
+  font-size: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: 0.25s;
+  box-shadow: 0 0 12px rgba(139,92,246,0.4);
+}
+
+.pd-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 18px rgba(139,92,246,0.6);
+}
+
+/* ================= DELETE BUTTON ================= */
+
+.pd-actions .danger {
+  background: linear-gradient(135deg,#ef4444,#dc2626);
+  box-shadow: 0 0 12px rgba(239,68,68,0.4);
+}
+
+/* ================= TABS ================= */
+
+.pd-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 30px;
+}
+
+.pd-tabs button {
+  padding: 10px 22px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+
+  background: rgba(255,255,255,0.08);
+  color: #cbd5e1;
+  font-size: 14px;
+
+  transition: 0.3s;
+}
+
+.pd-tabs button:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+}
+
+.pd-tabs button.active {
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+  color: white;
+  font-weight: 600;
+
+  box-shadow: 0 0 15px rgba(139,92,246,0.6);
+}
+
+/* ================= TAB CONTENT ================= */
+
+.pd-content {
+  margin-top: 25px;
+  width: 100%;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+
+  .pd-container {
+    padding: 20px;
+  }
+
+  .pd-glass {
+    padding: 22px;
+  }
+
+  .pd-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .pd-tabs {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+}

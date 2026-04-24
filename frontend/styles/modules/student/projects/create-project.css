@@ -1,0 +1,238 @@
+/* ================= PAGE ================= */
+.cp-page {
+  width: 100%;
+  max-width: 900px;
+
+  /* 🔥 REAL CENTER FIX */
+  margin: 40px auto;
+
+  padding: 0 20px;
+}
+
+/* ================= CARD ================= */
+.cp-card {
+  width: 100%;
+  max-width: 750px;
+
+  margin: 0 auto;
+
+  padding: 30px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+/* ================= HEADER ================= */
+.cp-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #ffffff;
+}
+
+.cp-header p {
+  color: #cbd5f5;
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+
+/* ================= FORM ================= */
+.cp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ================= FIELD ================= */
+.cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.cp-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+/* ================= INPUT ================= */
+.cp-field input,
+.cp-field textarea {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 14px;
+
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+
+  outline: none;
+  transition: 0.3s;
+
+  height: 45px;
+}
+
+.cp-field textarea {
+  height: auto;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.cp-field input::placeholder,
+.cp-field textarea::placeholder {
+  color: #94a3b8;
+}
+
+.cp-field input:focus,
+.cp-field textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+/* ================= GRID ================= */
+.cp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* ================= MULTI SELECT ================= */
+.cp-multi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px;
+  min-height: 45px;
+
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.cp-multi input {
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 120px;
+
+  background: transparent;
+  color: #fff;
+}
+
+/* ================= CHIPS ================= */
+.cp-chip {
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-chip span {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* ================= DROPDOWN ================= */
+.cp-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+
+  border-radius: 10px;
+  margin-bottom: 5px;
+
+  z-index: 9999;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Scroll */
+.cp-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cp-dropdown::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+/* ================= GROUP ================= */
+.cp-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 8px 12px;
+}
+
+/* ================= ITEMS ================= */
+.cp-item {
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #e2e8f0;
+  transition: 0.2s;
+}
+
+.cp-item:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.cp-item.active {
+  background: #6366f1;
+  color: #fff;
+}
+
+/* ================= BUTTON ================= */
+.cp-btn {
+  margin-top: 10px;
+  padding: 12px;
+
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+
+  border: none;
+  transition: 0.3s;
+}
+
+.cp-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .cp-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cp-card {
+    padding: 20px;
+  }
+}
