@@ -128,7 +128,7 @@ class User(Base):
     user_id = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    role = Column(Enum("student", "mentor", "admin"), default="student")
+    role = Column(Enum("student", "mentor", "admin", name="user_role_enum"), default="student")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # 🔴 1. Add Refresh Token Fields (DB)
@@ -193,7 +193,7 @@ class Project(Base):
     required_members = Column(Integer, default=1)
     expected_completion = Column(String(20))
 
-    status = Column(Enum("pending", "active", "closed", "completed", "archived"), default="pending")
+    status = Column(Enum("pending", "active", "closed", "completed", "archived", name="project_status_enum"), default="pending")
     created_by = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -215,7 +215,7 @@ class ProjectMember(Base):
     id = Column(Integer, primary_key=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
     user_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
-    role = Column(Enum("owner", "member"), default="member")
+    role = Column(Enum("owner", "member", name="project_member_role_enum"), default="member")
     joined_at = Column(DateTime, default=datetime.utcnow)
 
     project = relationship("Project", back_populates="members")
@@ -277,7 +277,7 @@ class JoinRequest(Base):
     # 🔴 who sent the request (student)
 
     status = Column(
-        Enum("pending", "accepted", "rejected", "cancelled"),
+        Enum("pending", "accepted", "rejected", "cancelled", name="join_request_status_enum"),
         default="pending"
     )
 
@@ -300,7 +300,7 @@ class MentorRequest(Base):
     message = Column(Text, nullable=True)
 
     status = Column(
-        Enum("pending", "accepted", "rejected"),
+        Enum("pending", "accepted", "rejected", name="mentor_request_status_enum"),
         default="pending"
     )
 
@@ -333,7 +333,7 @@ class ProjectCompletionRequest(Base):
     owner_id = Column(String(50), ForeignKey("users.user_id", ondelete="CASCADE"))
 
     status = Column(
-        Enum("pending", "accepted", "rejected"),
+        Enum("pending", "accepted", "rejected", name="completion_status_enum"),
         default="pending"
     )
 
