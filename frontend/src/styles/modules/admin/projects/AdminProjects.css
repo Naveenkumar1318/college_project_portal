@@ -1,0 +1,167 @@
+/* COPY SAME DESIGN FOR ADMIN */
+
+.ap-container {
+  padding: 25px;
+  color: white;
+}
+
+/* BACK BUTTON */
+
+.ap-back {
+  margin-bottom: 10px;
+  background: none;
+  border: none;
+  color: #cbd5f5;
+  cursor: pointer;
+}
+
+/* TOP BAR */
+
+.ap-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+/* SEARCH */
+
+.ap-search {
+  width: 65%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  backdrop-filter: blur(12px);
+}
+
+/* TAB TOGGLE */
+
+.ap-tab-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.08);
+  border-radius: 30px;
+  padding: 5px;
+  backdrop-filter: blur(12px);
+}
+
+.ap-tab-toggle button {
+  padding: 8px 18px;
+  border: none;
+  background: transparent;
+  color: white;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.ap-tab-toggle .active {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+}
+
+/* PROJECT GRID */
+
+.ap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 25px;
+}
+
+/* CARD */
+
+.ap-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(18px);
+  border-radius: 18px;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: 0.3s;
+}
+
+.ap-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(99,102,241,0.4);
+}
+
+/* CARD HEADER */
+
+.ap-card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+/* OWNER */
+
+.ap-owner {
+  display: flex;
+  gap: 8px;
+  color: #cbd5f5;
+}
+
+/* BADGE */
+
+.ap-badge {
+  background: #22c55e;
+  padding: 5px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: black;
+}
+
+/* TITLE */
+
+.ap-title {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+/* DESCRIPTION */
+
+.ap-desc {
+  color: #94a3b8;
+  margin-bottom: 15px;
+}
+
+/* DETAILS GRID */
+
+.ap-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.ap-details-grid span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* BUTTON */
+
+.ap-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  color: white;
+  cursor: pointer;
+}
+
+/* AVATAR */
+
+.ap-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* EMPTY */
+
+.ap-empty {
+  text-align: center;
+  margin-top: 50px;
+  color: #94a3b8;
+}
