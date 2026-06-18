@@ -502,14 +502,15 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 def startup_event():
     logger.info("🚀 App started")
 
-    # Create tables
-    Base.metadata.create_all(bind=engine)
-
-    db = SessionLocal()
-
     try:
-        # 🔍 Check if admin exists
-        admin = db.query(User).filter(User.email == "admin@portal.com").first()
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ Database connected")
+
+        db = SessionLocal()
+
+        admin = db.query(User).filter(
+            User.email == "admin@portal.com"
+        ).first()
 
         if not admin:
             admin_user = User(
@@ -526,8 +527,14 @@ def startup_event():
         else:
             logger.info("ℹ️ Admin already exists")
 
+    except Exception as e:
+        logger.error(f"❌ Startup Error: {e}")
+
     finally:
-        db.close()
+        try:
+            db.close()
+        except:
+            pass
 # =========================
 # ENDPOINTS
 # =========================
